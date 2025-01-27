@@ -1,12 +1,16 @@
-## AI/Fetch
+## LMFetch
 
 A tool to convert any website into LLM-ready text  - structured markdown.
 
+![](frontend/static/prev.png)
 
+
+> [!NOTE] 
 > Currently it not yet a hosted service. you can clone and use locally instead.
 
-> * The current approach work best for server rendered website and would struggle for heavily client rendered websites.
-
+> [!WARNING]
+> The current approach work best for server rendered website and would struggle for heavily client rendered websites.
+ 
 ## steps.
 
 1. Clone repo:
