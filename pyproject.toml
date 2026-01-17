@@ -1,0 +1,23 @@
+[project]
+name = "lmfetch"
+version = "0.2.0"
+description = "Build intelligent context from codebases and URLs for LLMs"
+requires-python = ">=3.13"
+dependencies = [
+    "ai-query",
+    "aiohttp",
+    "aiofiles",
+    "tiktoken",
+    "click",
+    "rich",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio"]
+
+[project.scripts]
+lmfetch = "lmfetch.cli:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
