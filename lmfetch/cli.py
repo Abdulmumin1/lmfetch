@@ -29,12 +29,13 @@ def is_piped():
 
 
 def render_markdown(text: str) -> None:
-    """Render markdown with syntax-highlighted code."""
+    """Render markdown with syntax-highlighted code and tables."""
     lines = text.split("\n")
     i = 0
     while i < len(lines):
         line = lines[i]
 
+        # Code blocks
         if line.startswith("```"):
             lang = line[3:].strip() or "text"
             code_lines = []
@@ -47,6 +48,50 @@ def render_markdown(text: str) -> None:
             console.print(syntax)
             i += 1
             continue
+
+        # Tables
+        if line.strip().startswith("|") and i + 1 < len(lines) and lines[i + 1].strip().startswith("|"):
+            table_lines = []
+            while i < len(lines) and line.strip().startswith("|"):
+                table_lines.append(line)
+                i += 1
+                if i < len(lines):
+                    line = lines[i]
+            
+            if len(table_lines) >= 2:
+                # Parse table
+                try:
+                    # Parse header
+                    header_cells = [c.strip() for c in table_lines[0].strip().strip("|").split("|")]
+                    
+                    # Parse rows (skip separator at index 1)
+                    rows = []
+                    for row_line in table_lines[2:]:
+                        row_cells = [c.strip() for c in row_line.strip().strip("|").split("|")]
+                        if len(row_cells) == len(header_cells):
+                            rows.append(row_cells)
+                    
+                    # Render with Rich
+                    table = Table(show_header=True, header_style="bold magenta", border_style="dim", box=None)
+                    for h in header_cells:
+                        table.add_column(h)
+                    
+                    for r in rows:
+                        table.add_row(*r)
+                    
+                    console.print(table)
+                    console.print() # spacing
+                    continue
+                except Exception:
+                    # Fallback if parsing fails, print raw lines
+                    for tl in table_lines:
+                        console.print(tl)
+                    continue
+            else:
+                 # Not a valid table structure (too short), fallback
+                 for tl in table_lines:
+                     console.print(tl)
+                 continue
 
         if line.startswith("######"):
             console.print(Text(line[6:].strip(), style="bold"))
