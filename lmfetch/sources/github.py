@@ -40,6 +40,7 @@ class GitHubSource(Source):
         include: list[str] | None = None,
         exclude: list[str] | None = None,
         depth: int = 1,
+        force_large: bool = False,
     ):
         parsed = parse_github_url(url)
         if not parsed:
@@ -49,6 +50,7 @@ class GitHubSource(Source):
         self.include = include
         self.exclude = exclude
         self.depth = depth
+        self.force_large = force_large
         self._temp_dir: Path | None = None
 
     @property
@@ -97,7 +99,12 @@ class GitHubSource(Source):
         if self.subpath:
             scan_path = scan_path / self.subpath
 
-        source = CodebaseSource(scan_path, include=self.include, exclude=self.exclude)
+        source = CodebaseSource(
+            scan_path, 
+            include=self.include, 
+            exclude=self.exclude,
+            force_large=self.force_large
+        )
         items = await source.scan()
 
         # Prefix paths with repo name for clarity
