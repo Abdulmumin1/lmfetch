@@ -24,7 +24,7 @@ class KeywordRanker(Ranker):
         self.k1 = k1
         self.b = b
 
-    def rank(self, query: str, chunks: list[Chunk]) -> list[ScoredChunk]:
+    async def rank(self, query: str, chunks: list[Chunk]) -> list[ScoredChunk]:
         if not chunks:
             return []
 

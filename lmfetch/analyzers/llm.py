@@ -9,7 +9,7 @@ async def summarize_chunk(content: str, max_length: int = 200) -> str:
         from ai_query import generate_text, google
 
         result = await generate_text(
-            model=google("gemini-2.0-flash-lite"),
+            model=google("gemini-flash-lite-latest"),
             system="You are a code summarizer. Output ONLY a brief 1-2 sentence summary of what this code does. No markdown, no preamble.",
             prompt=f"Summarize this code:\n\n{content[:3000]}",
         )
@@ -32,7 +32,7 @@ async def compute_relevance_score(query: str, content: str) -> float:
         from ai_query import generate_text, google
 
         result = await generate_text(
-            model=google("gemini-2.0-flash-lite"),
+            model=google("gemini-flash-lite-latest"),
             system="You are a relevance scorer. Output ONLY a number from 0.0 to 1.0 indicating how relevant the code is to the query. Just the number, nothing else.",
             prompt=f"Query: {query}\n\nCode:\n{content[:2000]}",
         )
@@ -48,7 +48,7 @@ async def expand_query(query: str) -> list[str]:
         from ai_query import generate_text, google
 
         result = await generate_text(
-            model=google("gemini-2.0-flash-lite"),
+            model=google("gemini-flash-lite-latest"),
             system="You expand search queries for code search. Given a query, output 3-5 related terms/phrases that would help find relevant code. Output one per line, no numbers or bullets.",
             prompt=f"Expand this code search query: {query}",
         )

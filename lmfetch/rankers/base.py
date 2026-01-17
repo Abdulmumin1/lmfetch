@@ -19,5 +19,5 @@ class ScoredChunk:
 
 
 class Ranker:
-    def rank(self, query: str, chunks: list[Chunk]) -> list[ScoredChunk]:
+    async def rank(self, query: str, chunks: list[Chunk]) -> list[ScoredChunk]:
         raise NotImplementedError

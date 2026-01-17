@@ -57,7 +57,7 @@ class EmbeddingCache:
 class EmbeddingRanker(Ranker):
     def __init__(
         self,
-        model: str = "text-embedding-3-small",
+        model: str = "text-embedding-005",
         batch_size: int = 20,
         provider_options: dict | None = None,
     ):
@@ -87,17 +87,14 @@ class EmbeddingRanker(Ranker):
                 batch = uncached_texts[batch_start : batch_start + self.batch_size]
                 try:
                     # Determine provider and model object
-                    if "gemini" in self.model:
-                        model_obj = google.embedding(self.model)
-                    else:
-                        model_obj = openai.embedding(self.model)
+                    model_obj = google.embedding(self.model)
 
                     response = await embed_many(
                         model=model_obj,
                         values=batch,
                         provider_options=self.provider_options,
                     )
-
+                    print(response.embeddings)
                     for j, embedding in enumerate(response.embeddings):
                         idx = uncached_indices[batch_start + j]
                         results[idx] = embedding
@@ -108,12 +105,7 @@ class EmbeddingRanker(Ranker):
 
         return [r if r else [] for r in results]
 
-    def rank(self, query: str, chunks: list[Chunk]) -> list[ScoredChunk]:
-        return asyncio.get_event_loop().run_until_complete(
-            self.rank_async(query, chunks)
-        )
-
-    async def rank_async(self, query: str, chunks: list[Chunk]) -> list[ScoredChunk]:
+    async def rank(self, query: str, chunks: list[Chunk]) -> list[ScoredChunk]:
         if not chunks:
             return []
 
@@ -124,7 +116,7 @@ class EmbeddingRanker(Ranker):
         if not embeddings or not embeddings[0]:
             # Fallback to keyword ranking
             from .keyword import KeywordRanker
-            return KeywordRanker().rank(query, chunks)
+            return await KeywordRanker().rank(query, chunks)
 
         query_embedding = embeddings[0]
         chunk_embeddings = embeddings[1:]

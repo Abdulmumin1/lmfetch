@@ -101,7 +101,7 @@ class ContextBuilder:
         else:
             ranker = KeywordRanker()
 
-        scored = ranker.rank(query, all_chunks)
+        scored = await ranker.rank(query, all_chunks)
 
         # LLM-powered reranking if enabled
         if self.use_smart_rerank:

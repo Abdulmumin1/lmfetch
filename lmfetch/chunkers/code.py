@@ -27,10 +27,16 @@ FUNCTION_PATTERNS = {
     ],
     "rust": [
         (r"^(?:pub\s+)?(?:async\s+)?fn\s+(\w+)", "function"),
+        (r"^(?:pub\s+)?mod\s+(\w+)", "module"),
         (r"^(?:pub\s+)?struct\s+(\w+)", "struct"),
         (r"^(?:pub\s+)?enum\s+(\w+)", "enum"),
         (r"^(?:pub\s+)?trait\s+(\w+)", "trait"),
         (r"^impl(?:<[^>]+>)?\s+(\w+)", "impl"),
+    ],
+    "java": [
+        (r"^(?:public\s+|protected\s+|private\s+)?(?:static\s+|final\s+|abstract\s+)*class\s+(\w+)", "class"),
+        (r"^(?:public\s+|protected\s+|private\s+)?(?:static\s+|final\s+)*interface\s+(\w+)", "interface"),
+        (r"^(?:public\s+|protected\s+|private\s+)?enum\s+(\w+)", "enum"),
     ],
 }
 

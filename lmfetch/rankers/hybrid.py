@@ -25,7 +25,7 @@ class HybridRanker(Ranker):
 
         # Auto-detect if embeddings should be used
         if use_embeddings is None:
-            use_embeddings = bool(os.environ.get("OPENAI_API_KEY"))
+            use_embeddings = bool(os.environ.get("OPENAI_API_KEY")) or bool(os.environ.get("GOOGLE_API_KEY"))
         self.use_embeddings = use_embeddings
 
         self.keyword_ranker = KeywordRanker()
@@ -40,12 +40,12 @@ class HybridRanker(Ranker):
                 self.use_embeddings = False
         return self._embedding_ranker
 
-    def rank(self, query: str, chunks: list[Chunk]) -> list[ScoredChunk]:
+    async def rank(self, query: str, chunks: list[Chunk]) -> list[ScoredChunk]:
         if not chunks:
             return []
 
         # Keyword scores
-        keyword_scored = self.keyword_ranker.rank(query, chunks)
+        keyword_scored = await self.keyword_ranker.rank(query, chunks)
         keyword_scores = {s.chunk.path + str(s.chunk.start_line): s.score for s in keyword_scored}
 
         # Embedding scores (if available)
@@ -54,9 +54,7 @@ class HybridRanker(Ranker):
             embedding_ranker = self._get_embedding_ranker()
             if embedding_ranker:
                 try:
-                    embedding_scored = asyncio.get_event_loop().run_until_complete(
-                        embedding_ranker.rank_async(query, chunks)
-                    )
+                    embedding_scored = await embedding_ranker.rank(query, chunks)
                     embedding_scores = {s.chunk.path + str(s.chunk.start_line): s.score for s in embedding_scored}
                 except Exception:
                     pass
