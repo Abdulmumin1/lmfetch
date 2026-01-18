@@ -145,6 +145,12 @@ jobs:
           mkdir -p dist
           find build -type f \( -name "main_entry.bin" -o -name "main_entry.exe" -o -name "main_entry" \) -exec mv {} dist/${{ matrix.asset_name }} \;
 
+      - name: Sign Binary (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          # Ad-hoc sign the onefile binary to prevent slow startup (Gatekeeper/Quarantine checks)
+          codesign -s - --force --deep dist/${{ matrix.asset_name }}
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
