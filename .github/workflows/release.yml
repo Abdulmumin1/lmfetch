@@ -118,7 +118,7 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Build with Nuitka
-        uses: Nuitka/Nuitka-Action@v1
+        uses: Nuitka/Nuitka-Action@main
         with:
           nuitka-version: stable
           script-name: main_entry.py
