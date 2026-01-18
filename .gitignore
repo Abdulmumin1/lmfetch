@@ -9,3 +9,4 @@ wheels/
 .venv
 lmfetch-plan.md
 data/
+import.log

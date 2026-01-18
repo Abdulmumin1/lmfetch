@@ -1,0 +1,4 @@
+{
+  "type": "patch",
+  "description": "perf: improved startup time by moving to dynamic import"
+}

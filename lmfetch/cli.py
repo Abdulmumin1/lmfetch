@@ -13,8 +13,8 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
 
-from .builder import ContextBuilder
-from .tokens import parse_token_budget
+from rich.panel import Panel
+from rich.table import Table
 
 console = Console()
 err_console = Console(stderr=True)
@@ -177,6 +177,10 @@ def cli(path, query, budget, output, context, include, exclude, model, fast, cle
             return
         
         piped = is_piped()
+        
+        from .builder import ContextBuilder
+        from .tokens import parse_token_budget
+
         budget_tokens = parse_token_budget(budget)
 
         builder = ContextBuilder(
