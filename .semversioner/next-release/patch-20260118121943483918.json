@@ -1,0 +1,4 @@
+{
+  "type": "patch",
+  "description": "fix: retry release build for native Nuitka binaries (v0.3.0 artifacts were missing)"
+}
