@@ -1,6 +1,10 @@
 # Changelog
 Note: version releases in the 0.x.y range may introduce breaking changes.
 
+## 0.2.0
+
+- minor: feat: native compilation support via Cython and CI artifact fixes
+
 ## 0.1.2
 
 - patch: perf: improved startup time by moving to dynamic import

@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "description": "feat: native compilation support via Cython and CI artifact fixes",
+      "type": "minor"
+    }
+  ],
+  "created_at": "2026-01-18T11:35:08+00:00",
+  "version": "0.2.0"
+}
