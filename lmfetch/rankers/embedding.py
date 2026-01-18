@@ -8,7 +8,6 @@ from pathlib import Path
 
 from ..chunkers.base import Chunk
 from .base import Ranker, ScoredChunk
-from ai_query import embed, embed_many, openai, google
 from ..utils import retry
 
 
@@ -88,6 +87,7 @@ class EmbeddingRanker(Ranker):
             for batch_start in range(0, len(uncached_texts), self.batch_size):
                 batch = uncached_texts[batch_start : batch_start + self.batch_size]
                 try:
+                    from ai_query import embed_many, google
                     # Determine provider and model object
                     model_obj = google.embedding(self.model)
 
