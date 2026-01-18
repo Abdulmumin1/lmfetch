@@ -172,11 +172,9 @@ def cli(path, query, budget, output, context, include, exclude, model, fast, cle
 
         # Check if path/query are missing (required unless clean-cache is used)
         if not path or not query:
-             # This is tricky because path/query are arguments, so Click ensures they exist before this function runs.
-             # But since they are required arguments, Click will error out before we can check clean_cache if we aren't careful.
-             # Actually, required arguments are parsed first.
-             # If I want clean_cache to work without arguments, I need to make arguments optional?
-             pass
+            ctx = click.get_current_context()
+            click.echo(ctx.get_help())
+            return
         
         piped = is_piped()
         budget_tokens = parse_token_budget(budget)
