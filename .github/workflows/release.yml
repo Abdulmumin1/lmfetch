@@ -134,6 +134,7 @@ jobs:
           path: dist/${{ matrix.asset_name }}
 
   publish:
+    environment: release
     needs: [prepare, build-pypi, build-binaries]
     if: needs.prepare.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
