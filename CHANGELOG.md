@@ -1,6 +1,10 @@
 # Changelog
 Note: version releases in the 0.x.y range may introduce breaking changes.
 
+## 0.3.1
+
+- patch: fix: retry release build for native Nuitka binaries (v0.3.0 artifacts were missing)
+
 ## 0.3.0
 
 - minor: feat: Switch to Nuitka for native compilation (8x faster startup), added lazy loading, and optimized CI caching
