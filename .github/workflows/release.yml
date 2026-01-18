@@ -1,0 +1,178 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.check.outputs.has_changes }}
+      version: ${{ steps.semversioner.outputs.version }}
+      tag_name: "v${{ steps.semversioner.outputs.version }}"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Check for changes
+        id: check
+        run: |
+          if [ -z "$(ls -A .semversioner/next-release/*.json 2>/dev/null)" ]; then
+            echo "No changesets found, skipping release."
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure Git
+        if: steps.check.outputs.has_changes == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run Semversioner Release
+        if: steps.check.outputs.has_changes == 'true'
+        id: semversioner
+        run: |
+          uv run semversioner release
+          uv run semversioner changelog > CHANGELOG.md
+          
+          NEW_VERSION=$(uv run semversioner current-version)
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
+
+      - name: Commit and Push
+        if: steps.check.outputs.has_changes == 'true'
+        run: |
+          git add .
+          git commit -m "chore: release ${{ steps.semversioner.outputs.version }}"
+          git tag -a "v${{ steps.semversioner.outputs.version }}" -m "Release ${{ steps.semversioner.outputs.version }}"
+          git push origin main --follow-tags
+
+  build-pypi:
+    needs: prepare
+    if: needs.prepare.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag_name }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Build
+        run: uv build
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pypi-dist
+          path: dist/
+
+  build-binaries:
+    needs: prepare
+    if: needs.prepare.outputs.has_changes == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: lmfetch
+            asset_name: lmfetch-linux-amd64
+          - os: windows-latest
+            artifact_name: lmfetch.exe
+            asset_name: lmfetch-windows-amd64.exe
+          - os: macos-latest
+            artifact_name: lmfetch
+            asset_name: lmfetch-macos-amd64
+          - os: macos-14
+            artifact_name: lmfetch
+            asset_name: lmfetch-macos-arm64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag_name }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Build binary
+        run: |
+          uv run pyinstaller --onefile --name lmfetch main_entry.py
+
+      - name: Rename
+        shell: bash
+        run: |
+          cd dist
+          mv ${{ matrix.artifact_name }} ${{ matrix.asset_name }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.asset_name }}
+          path: dist/${{ matrix.asset_name }}
+
+  publish:
+    needs: [prepare, build-pypi, build-binaries]
+    if: needs.prepare.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag_name }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare Release Assets
+        run: |
+          mkdir release_assets
+          # Move pypi dists
+          cp artifacts/pypi-dist/* release_assets/
+          # Move binaries (flatten structure)
+          find artifacts -name "lmfetch-*" -type f -exec cp {} release_assets/ \;
+          ls -R release_assets/
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          
+          # Extract release notes
+          python -c "import sys, re; content=open('CHANGELOG.md').read(); match = re.search(r'## ' + re.escape('$VERSION') + r'\n(.*?)(?=\n## |\Z)', content, re.DOTALL); print(match.group(1).strip() if match else 'See CHANGELOG.md for details')" > release_notes.md
+
+          gh release create "v$VERSION" \
+            release_assets/* \
+            --title "lmfetch@$VERSION" \
+            --notes-file release_notes.md \
+            --generate-notes
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages_dir: release_assets/
+          password: ${{ secrets.PYPI_API_TOKEN }}

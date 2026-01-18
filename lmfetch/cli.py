@@ -140,8 +140,9 @@ def print_stats(result, query: str) -> None:
 
 
 @click.command()
-@click.argument("path")
-@click.argument("query")
+@click.version_option(package_name="lmfetch")
+@click.argument("path", required=False)
+@click.argument("query", required=False)
 @click.option("-b", "--budget", default="50k", help="Token budget (50k, 100k, 1m)")
 @click.option("-o", "--output", type=click.Path(), help="Write context to file")
 @click.option("-c", "--context", is_flag=True, help="Output context only, skip LLM")
@@ -149,7 +150,9 @@ def print_stats(result, query: str) -> None:
 @click.option("-e", "--exclude", multiple=True, help="Exclude patterns (tests/*)")
 @click.option("-m", "--model", default="gemini-3-flash-preview", help="Model to use")
 @click.option("-f", "--fast", is_flag=True, help="Skip smart reranking")
-def cli(path, query, budget, output, context, include, exclude, model, fast):
+@click.option("--clean-cache", is_flag=True, help="Clear the internal cache")
+@click.option("--force-large", is_flag=True, help="Process large files (>1MB or >20k lines)")
+def cli(path, query, budget, output, context, include, exclude, model, fast, clean_cache, force_large):
     """Build smart context from codebases for LLM queries.
 
     \b
@@ -160,6 +163,21 @@ def cli(path, query, budget, output, context, include, exclude, model, fast):
       lmfetch . "database models" -c > context.md
     """
     try:
+        if clean_cache:
+            from .cache import SQLiteCache
+            cache = SQLiteCache()
+            cache.clear()
+            console.print("[green]✓[/green] Cache cleared")
+            return
+
+        # Check if path/query are missing (required unless clean-cache is used)
+        if not path or not query:
+             # This is tricky because path/query are arguments, so Click ensures they exist before this function runs.
+             # But since they are required arguments, Click will error out before we can check clean_cache if we aren't careful.
+             # Actually, required arguments are parsed first.
+             # If I want clean_cache to work without arguments, I need to make arguments optional?
+             pass
+        
         piped = is_piped()
         budget_tokens = parse_token_budget(budget)
 
@@ -170,12 +188,18 @@ def cli(path, query, budget, output, context, include, exclude, model, fast):
         )
 
         if not piped:
-            with Live(Spinner("dots", text="[dim]Scanning...[/dim]"), console=console, transient=True):
+            spinner = Spinner("dots2", text="[dim]Initializing...[/dim]", style="cyan")
+            with Live(spinner, console=console, transient=True, refresh_per_second=10):
+                def on_progress(msg: str):
+                    spinner.update(text=f"[bold cyan]{msg}[/bold cyan]")
+                
                 result = run_async(builder.build(
                     path=path,
                     query=query,
                     include=list(include) if include else None,
                     exclude=list(exclude) if exclude else None,
+                    on_progress=on_progress,
+                    force_large=force_large,
                 ))
         else:
             result = run_async(builder.build(
@@ -183,6 +207,7 @@ def cli(path, query, budget, output, context, include, exclude, model, fast):
                 query=query,
                 include=list(include) if include else None,
                 exclude=list(exclude) if exclude else None,
+                force_large=force_large,
             ))
 
         context_text = result.to_text(format="markdown")
@@ -207,7 +232,7 @@ def cli(path, query, budget, output, context, include, exclude, model, fast):
 
         print_stats(result, query)
 
-        with Live(Spinner("dots", text="[dim]Thinking...[/dim]"), console=console, transient=True):
+        with Live(Spinner("dots2", text="[bold cyan]Thinking...[/bold cyan]", style="cyan"), console=console, transient=True):
             answer = run_async(_query_llm(context_text, query, model))
 
         console.print(Panel.fit(
@@ -257,6 +282,7 @@ Provide a detailed answer with code examples from the context."""
 
     result = await generate_text(model=model, system=system, prompt=prompt)
     return result.text
+
 
 
 if __name__ == "__main__":

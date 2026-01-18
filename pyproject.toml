@@ -10,6 +10,7 @@ dependencies = [
     "tiktoken",
     "click",
     "rich",
+    "semversioner>=2.0.8",
 ]
 
 [project.optional-dependencies]
@@ -21,3 +22,8 @@ lmfetch = "lmfetch.cli:cli"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.18.0",
+]

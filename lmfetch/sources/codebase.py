@@ -17,6 +17,8 @@ IGNORE_FILES = {
     ".DS_Store", "Thumbs.db", ".gitignore", ".gitattributes",
     "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "Cargo.lock",
     "poetry.lock", "uv.lock",
+    "CHANGELOG.md", "CHANGELOG", "HISTORY.md", "CONTRIBUTING.md",
+    "LICENSE", "LICENSE.md", "NOTICE",
 }
 
 BINARY_EXTENSIONS = {
@@ -51,24 +53,39 @@ class CodebaseSource(Source):
         path: str | Path,
         include: list[str] | None = None,
         exclude: list[str] | None = None,
+        force_large: bool = False,
     ):
         self.path = Path(path).resolve()
         self.include = include or []
         self.exclude = exclude or []
+        self.force_large = force_large
 
     async def scan(self) -> list[SourceItem]:
         items = []
         files = self._find_files()
 
+        semaphore = asyncio.Semaphore(100)
+
         async def read_file(file_path: Path) -> SourceItem | None:
-            try:
-                async with aiofiles.open(file_path, "r", encoding="utf-8", errors="replace") as f:
-                    content = await f.read()
-                rel_path = str(file_path.relative_to(self.path))
-                lang = LANGUAGE_MAP.get(file_path.suffix.lower())
-                return SourceItem(path=rel_path, content=content, language=lang)
-            except Exception:
-                return None
+            async with semaphore:
+                try:
+                    # Check file size (1MB)
+                    size = file_path.stat().st_size
+                    if size > 1024 * 1024 and not self.force_large:
+                        return None
+
+                    async with aiofiles.open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                        content = await f.read()
+                    
+                    # Check line count (20k)
+                    if len(content.splitlines()) > 20000 and not self.force_large:
+                        return None
+
+                    rel_path = str(file_path.relative_to(self.path))
+                    lang = LANGUAGE_MAP.get(file_path.suffix.lower())
+                    return SourceItem(path=rel_path, content=content, language=lang)
+                except Exception:
+                    return None
 
         results = await asyncio.gather(*[read_file(f) for f in files])
         return [r for r in results if r is not None]

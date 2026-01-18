@@ -8,7 +8,8 @@ from pathlib import Path
 
 from ..chunkers.base import Chunk
 from .base import Ranker, ScoredChunk
-from ai_query import embed_many, google, openai
+from ai_query import embed, embed_many, openai, google
+from ..utils import retry
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -66,6 +67,7 @@ class EmbeddingRanker(Ranker):
         self.provider_options = provider_options or {}
         self.cache = EmbeddingCache()
 
+    @retry(retries=3, delay=1.0)
     async def _embed_texts(self, texts: list[str]) -> list[list[float]]:
         # Check cache first
         results: list[list[float] | None] = []
@@ -110,7 +112,17 @@ class EmbeddingRanker(Ranker):
             return []
 
         # Get embeddings
-        texts = [query] + [c.content[:2000] for c in chunks]
+        # Inject context into text for better semantic matching
+        texts = [query]
+        for c in chunks:
+            context = f"File: {c.path}\n"
+            if c.chunk_type and c.chunk_type != "file":
+                context += f"Type: {c.chunk_type}\n"
+            if c.name:
+                context += f"Name: {c.name}\n"
+            context += "---\n"
+            texts.append(context + c.content[:2000])
+
         embeddings = await self._embed_texts(texts)
 
         if not embeddings or not embeddings[0]:

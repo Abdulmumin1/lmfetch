@@ -1,14 +1,24 @@
 """Smart context builder - orchestrates sources, analyzers, chunkers, rankers."""
 
+import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
 
 from .sources import CodebaseSource, GitHubSource, parse_github_url, SourceItem
 from .chunkers import CodeChunker
 from .rankers import KeywordRanker, ScoredChunk
 from .rankers.hybrid import HybridRanker
 from .analyzers import build_dependency_graph, get_related_files
+import concurrent.futures
+import hashlib
+import time
 from .tokens import count_tokens
+from .cache import SQLiteCache
+
+
+def chunk_worker(chunker: CodeChunker, path: str, content: str, language: str | None) -> list:
+    return chunker.chunk(path, content, language)
 
 
 @dataclass
@@ -72,30 +82,99 @@ class ContextBuilder:
         query: str,
         include: list[str] | None = None,
         exclude: list[str] | None = None,
+        on_progress: Callable[[str], None] | None = None,
+        force_large: bool = False,
     ) -> ContextResult:
+        def progress(msg: str):
+            if on_progress:
+                on_progress(msg)
+
         path_str = str(path)
 
         # Detect source type
         if parse_github_url(path_str):
-            source = GitHubSource(path_str, include=include, exclude=exclude)
+            source = GitHubSource(
+                path_str, 
+                include=include, 
+                exclude=exclude,
+                force_large=force_large
+            )
             source_type = "github"
         else:
-            source = CodebaseSource(path_str, include=include, exclude=exclude)
+            source = CodebaseSource(
+                path_str, 
+                include=include, 
+                exclude=exclude,
+                force_large=force_large
+            )
             source_type = "codebase"
 
+        progress("Scanning code...")
         items = await source.scan()
 
+        # Initialize cache and prune old entries
+        cache = SQLiteCache()
+        cache.prune()
+
         # Build dependency graph
+        progress(f"Building dependency graph for {len(items)} files...")
         files_dict = {item.path: (item.content, item.language) for item in items}
         dep_graph = build_dependency_graph(files_dict) if self.follow_imports else {}
 
-        # Chunk all files
+        # Chunk all files with caching
+        progress("Chunking files...")
         all_chunks = []
+        cached_count = 0
+        
+        # Prepare items for parallel chunking
+        items_to_chunk = []
+        
         for item in items:
-            chunks = self.chunker.chunk(item.path, item.content, item.language)
-            all_chunks.extend(chunks)
+            # Calculate hash
+            file_hash = hashlib.sha256(item.content.encode()).hexdigest()
+            
+            # Try to get from cache
+            cached_chunks = cache.get_file(item.path, file_hash)
+            if cached_chunks:
+                all_chunks.extend(cached_chunks)
+                cached_count += 1
+            else:
+                items_to_chunk.append((item, file_hash))
+
+        if items_to_chunk:
+            progress(f"Chunking {len(items_to_chunk)} files in parallel...")
+            loop = asyncio.get_event_loop()
+            with concurrent.futures.ProcessPoolExecutor() as executor:
+                futures = [
+                    loop.run_in_executor(
+                        executor, 
+                        chunk_worker, 
+                        self.chunker, 
+                        item.path, 
+                        item.content, 
+                        item.language
+                    )
+                    for item, _ in items_to_chunk
+                ]
+                results = await asyncio.gather(*futures)
+                
+            # Save new chunks to cache
+            for (item, file_hash), chunks in zip(items_to_chunk, results):
+                cache.save_file(
+                    path=item.path,
+                    file_hash=file_hash,
+                    mtime=time.time(),
+                    size=len(item.content),
+                    language=item.language,
+                    chunks=chunks
+                )
+                all_chunks.extend(chunks)
+
+        if cached_count > 0:
+            progress(f"Used cached chunks for {cached_count}/{len(items)} files")
 
         # Initial ranking
+        progress(f"Ranking {len(all_chunks)} chunks...")
         if self.use_hybrid_ranking:
             ranker = HybridRanker(dependency_graph=dep_graph)
         else:
@@ -105,6 +184,7 @@ class ContextBuilder:
 
         # LLM-powered reranking if enabled
         if self.use_smart_rerank:
+            progress("Reranking with LLM...")
             from .analyzers.llm import rerank_with_llm
 
             chunks_for_rerank = [

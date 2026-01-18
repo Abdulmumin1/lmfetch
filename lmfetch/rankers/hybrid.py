@@ -16,12 +16,14 @@ class HybridRanker(Ranker):
         embedding_weight: float = 0.4,
         importance_weight: float = 0.2,
         use_embeddings: bool | None = None,
+        use_hyde: bool | None = None,
         dependency_graph: dict[str, set[str]] | None = None,
     ):
         self.keyword_weight = keyword_weight
         self.embedding_weight = embedding_weight
         self.importance_weight = importance_weight
         self.dependency_graph = dependency_graph or {}
+        self.use_hyde = use_hyde if use_hyde is not None else True
 
         # Auto-detect if embeddings should be used
         if use_embeddings is None:
@@ -54,7 +56,52 @@ class HybridRanker(Ranker):
             embedding_ranker = self._get_embedding_ranker()
             if embedding_ranker:
                 try:
-                    embedding_scored = await embedding_ranker.rank(query, chunks)
+                    # HyDE Generation
+                    if self.use_hyde:
+                        try:
+                            # Use OpenAI fallback or similar, but we need a generative model here.
+                            # Since we don't have a reliable "generate_text" client linked here easily 
+                            # (except loading ai_query), we'll try to use it.
+                            from ai_query import generate_text, openai, google, anthropic
+                            
+                            # Simple heuristics for model selection
+                            model_name = os.environ.get("LMFETCH_MODEL", "gemini-3-flash-preview")
+                            if "gpt" in model_name:
+                                model = openai(model_name)
+                            elif "claude" in model_name:
+                                model = anthropic(model_name)
+                            else:
+                                # Default to google or what's available
+                                model = google(model_name)
+
+                            hyde_prompt = (
+                                f"Write a hypothetical code snippet or documentation that answers the question: '{query}'. "
+                                "Do not explain, just provide the code/doc."
+                            )
+                            # Short timeout for speed
+                            from ..utils import retry
+                            
+                            @retry(retries=2, delay=0.5)
+                            async def _gen_hyde():
+                                return await generate_text(model=model, prompt=hyde_prompt)
+                                
+                            hypothetical_doc = (await _gen_hyde()).text
+                            
+                            # Combine query + hypothetical doc
+                            query_elements = [query, hypothetical_doc[:1000]] # Limit size
+                            
+                            # We need EmbeddingRanker to support list of queries? 
+                            # Currently rank() takes str. 
+                            # We can just concatenate or average?
+                            # Concatenation is simplest for now: "Query\n---\nHypothetical Doc"
+                            enhanced_query = f"{query}\n---\n{hypothetical_doc[:1000]}"
+                            embedding_scored = await embedding_ranker.rank(enhanced_query, chunks)
+                        except Exception:
+                            # Fallback to normal query if HyDE fails (e.g. no gen model)
+                            embedding_scored = await embedding_ranker.rank(query, chunks)
+                    else:
+                        embedding_scored = await embedding_ranker.rank(query, chunks)
+
                     embedding_scores = {s.chunk.path + str(s.chunk.start_line): s.score for s in embedding_scored}
                 except Exception:
                     pass
@@ -88,6 +135,11 @@ class HybridRanker(Ranker):
                     kw_score * (self.keyword_weight + self.embedding_weight) +
                     imp_score * self.importance_weight
                 )
+
+            # Penalize markdown/text files if query looks like code search
+            # Heuristic: if extension is .md, .txt, .rst reduce score
+            if chunk.path.endswith((".md", ".mdx", ".txt", ".rst")):
+                 final_score *= 0.6  # 40% penalty for docs
 
             scored.append(ScoredChunk(chunk=chunk, score=final_score))
 
