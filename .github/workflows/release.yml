@@ -117,6 +117,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
+      - name: Build Native Extensions
+        env:
+          LMFETCH_COMPILE: "1"
+        run: uv run python setup.py build_ext --inplace
+
       - name: Build binary
         env:
           LMFETCH_COMPILE: "1"

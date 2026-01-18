@@ -3,7 +3,7 @@ name = "lmfetch"
 version = "0.2.0"
 description = "Build intelligent context from codebases and URLs for LLMs"
 authors = [
-    { name = "Abdulmumin Yaqeen", email = "boyfromthefuture01@gmail.com" }
+    { name = "Abdulmumin Yaqeen", email = "abdulmuminyqn@gmail.com" }
 ]
 readme = "README.md"
 requires-python = ">=3.13"
