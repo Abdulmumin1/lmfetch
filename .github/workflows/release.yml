@@ -4,6 +4,16 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "lmfetch/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "main_entry.py"
+      - "setup.py"
+      - "install.sh"
+      - ".semversioner/**"
+      - ".github/workflows/release.yml"
+      - ".python-version"
 
 permissions:
   contents: write
