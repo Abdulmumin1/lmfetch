@@ -1,6 +1,6 @@
 [project]
 name = "lmfetch"
-version = "0.1.0"
+version = "0.1.1"
 description = "Build intelligent context from codebases and URLs for LLMs"
 requires-python = ">=3.13"
 dependencies = [

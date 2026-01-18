@@ -1,4 +1,0 @@
-{
-  "type": "patch",
-  "description": "fix: resolved cli argument error handling that caused 'Error: 0' output"
-}
