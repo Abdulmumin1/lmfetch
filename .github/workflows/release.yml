@@ -117,7 +117,14 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
+      - name: Build Native Extensions
+        env:
+          LMFETCH_COMPILE: "1"
+        run: uv run python setup.py build_ext --inplace
+
       - name: Build binary
+        env:
+          LMFETCH_COMPILE: "1"
         run: |
           uv run pyinstaller --onefile --name lmfetch main_entry.py
 
@@ -150,12 +157,20 @@ jobs:
 
       - name: Prepare Release Assets
         run: |
-          mkdir release_assets
-          # Move pypi dists
-          cp artifacts/pypi-dist/* release_assets/
-          # Move binaries (flatten structure)
-          find artifacts -name "lmfetch-*" -type f -exec cp {} release_assets/ \;
-          ls -R release_assets/
+          mkdir -p release_assets/github
+          mkdir -p release_assets/pypi
+          
+          # Move pypi dists to both locations
+          cp artifacts/pypi-dist/* release_assets/pypi/
+          cp artifacts/pypi-dist/* release_assets/github/
+          
+          # Move binaries ONLY to github assets
+          find artifacts -name "lmfetch-*" -type f -exec cp {} release_assets/github/ \;
+          
+          echo "GitHub Assets:"
+          ls -R release_assets/github/
+          echo "PyPI Assets:"
+          ls -R release_assets/pypi/
 
       - name: Create GitHub Release
         env:
@@ -167,7 +182,7 @@ jobs:
           python -c "import sys, re; content=open('CHANGELOG.md').read(); match = re.search(r'## ' + re.escape('$VERSION') + r'\n(.*?)(?=\n## |\Z)', content, re.DOTALL); print(match.group(1).strip() if match else 'See CHANGELOG.md for details')" > release_notes.md
 
           gh release create "v$VERSION" \
-            release_assets/* \
+            release_assets/github/* \
             --title "lmfetch@$VERSION" \
             --notes-file release_notes.md \
             --generate-notes
@@ -175,5 +190,5 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages_dir: release_assets/
+          packages_dir: release_assets/pypi/
           password: ${{ secrets.PYPI_API_TOKEN }}

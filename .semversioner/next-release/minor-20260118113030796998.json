@@ -1,0 +1,4 @@
+{
+  "type": "minor",
+  "description": "feat: native compilation support via Cython and CI artifact fixes"
+}

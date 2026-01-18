@@ -10,3 +10,17 @@ wheels/
 lmfetch-plan.md
 data/
 import.log
+
+# Build artifacts
+build/
+dist/
+*.egg-info
+*.so
+*.c
+*.o
+__pycache__/
+
+# Cython generated
+lmfetch/**/*.c
+test_compile.py
+test_compile.c
