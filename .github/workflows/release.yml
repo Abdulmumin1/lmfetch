@@ -41,25 +41,17 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Run Semversioner Release
+      - name: Run Semversioner Release (Dry Run)
         if: steps.check.outputs.has_changes == 'true'
         id: semversioner
         run: |
+          # We run release locally to calculate version/changelog but don't commit it yet
+          # This allows us to pass the version to builders
           uv run semversioner release
           uv run semversioner changelog > CHANGELOG.md
           
           NEW_VERSION=$(uv run semversioner current-version)
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          
-          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
-
-      - name: Commit and Push
-        if: steps.check.outputs.has_changes == 'true'
-        run: |
-          git add .
-          git commit -m "chore: release ${{ steps.semversioner.outputs.version }}"
-          git tag -a "v${{ steps.semversioner.outputs.version }}" -m "Release ${{ steps.semversioner.outputs.version }}"
-          git push origin main --follow-tags
 
   build-pypi:
     needs: prepare
@@ -68,10 +60,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.prepare.outputs.tag_name }}
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+
+      - name: Patch Version
+        run: |
+          # Apply the version calculated in prepare
+          NEW_VERSION="${{ needs.prepare.outputs.version }}"
+          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
 
       - name: Build
         run: uv build
@@ -104,7 +102,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.prepare.outputs.tag_name }}
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -116,6 +114,22 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --all-extras --dev
+        
+      - name: Activate Virtualenv
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            echo "$GITHUB_WORKSPACE/.venv/Scripts" >> $GITHUB_PATH
+          else
+            echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+          fi
+        
+      - name: Patch Version
+        shell: bash
+        run: |
+          NEW_VERSION="${{ needs.prepare.outputs.version }}"
+          # Handle cross-platform sed difference if needed, or just use python
+          python -c "import re; c = open('pyproject.toml').read(); open('pyproject.toml', 'w').write(re.sub(r'version = \".*\"', f'version = \"$NEW_VERSION\"', c, 1))"
 
       - name: Build with Nuitka
         uses: Nuitka/Nuitka-Action@main
@@ -124,22 +138,12 @@ jobs:
           script-name: main_entry.py
           mode: onefile
           enable-plugins: anti-bloat
-          # Use uv to install deps before this, so we assume environment is ready
-          # The action will use the current python environment
           
       - name: Rename Artifact
         shell: bash
         run: |
           mkdir -p dist
-          # Nuitka Action puts output in build/ (filenames vary by OS)
-          # Linux/Mac: main_entry.bin, Windows: main_entry.exe (usually)
-          # But in onefile mode, it might be just main_entry
-          
-          # Find the binary in build/
           find build -type f \( -name "main_entry.bin" -o -name "main_entry.exe" -o -name "main_entry" \) -exec mv {} dist/${{ matrix.asset_name }} \;
-          
-          # Verify move
-          ls -lh dist/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -155,7 +159,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.prepare.outputs.tag_name }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+      - name: Commit Release & Tag
+        run: |
+          # NOW we actually commit the release
+          uv run semversioner release
+          uv run semversioner changelog > CHANGELOG.md
+          
+          NEW_VERSION="${{ needs.prepare.outputs.version }}"
+          
+          # Patch pyproject.toml again for the commit
+          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
+          
+          git add .
+          git commit -m "chore: release $NEW_VERSION"
+          git tag -a "v$NEW_VERSION" -m "Release $NEW_VERSION"
+          git push origin main --follow-tags
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -185,7 +214,7 @@ jobs:
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
           
-          # Extract release notes
+          # Extract release notes properly
           python -c "import sys, re; content=open('CHANGELOG.md').read(); match = re.search(r'## ' + re.escape('$VERSION') + r'\n(.*?)(?=\n## |\Z)', content, re.DOTALL); print(match.group(1).strip() if match else 'See CHANGELOG.md for details')" > release_notes.md
 
           gh release create "v$VERSION" \
