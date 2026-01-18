@@ -1,0 +1,14 @@
+[build]
+builder = "nixpacks"
+
+[build.nixpacks]
+nixPkgs = ["python313", "uv"]
+
+[deploy]
+startCommand = "uv run lmfetch-mcp"
+
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
