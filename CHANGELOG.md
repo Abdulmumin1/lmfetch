@@ -1,6 +1,10 @@
 # Changelog
 Note: version releases in the 0.x.y range may introduce breaking changes.
 
+## 0.3.2
+
+- patch: stable release
+
 ## 0.3.1
 
 - patch: fix: retry release build for native Nuitka binaries (v0.3.0 artifacts were missing)
