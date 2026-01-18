@@ -1,0 +1,10 @@
+{
+  "changes": [
+    {
+      "description": "perf: improved startup time by moving to dynamic import",
+      "type": "patch"
+    }
+  ],
+  "created_at": "2026-01-18T11:07:01+00:00",
+  "version": "0.1.2"
+}
