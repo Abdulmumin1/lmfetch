@@ -140,6 +140,7 @@ def print_stats(result, query: str) -> None:
 
 
 @click.command()
+@click.version_option(package_name="lmfetch")
 @click.argument("path", required=False)
 @click.argument("query", required=False)
 @click.option("-b", "--budget", default="50k", help="Token budget (50k, 100k, 1m)")
