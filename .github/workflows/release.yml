@@ -117,22 +117,29 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
-      - name: Build Native Extensions
-        env:
-          LMFETCH_COMPILE: "1"
-        run: uv run python setup.py build_ext --inplace
-
-      - name: Build binary
-        env:
-          LMFETCH_COMPILE: "1"
-        run: |
-          uv run pyinstaller --onefile --name lmfetch main_entry.py
-
-      - name: Rename
+      - name: Build with Nuitka
+        uses: Nuitka/Nuitka-Action@v1
+        with:
+          nuitka-version: stable
+          script-name: main_entry.py
+          mode: onefile
+          enable-plugins: anti-bloat
+          # Use uv to install deps before this, so we assume environment is ready
+          # The action will use the current python environment
+          
+      - name: Rename Artifact
         shell: bash
         run: |
-          cd dist
-          mv ${{ matrix.artifact_name }} ${{ matrix.asset_name }}
+          mkdir -p dist
+          # Nuitka Action puts output in build/ (filenames vary by OS)
+          # Linux/Mac: main_entry.bin, Windows: main_entry.exe (usually)
+          # But in onefile mode, it might be just main_entry
+          
+          # Find the binary in build/
+          find build -type f \( -name "main_entry.bin" -o -name "main_entry.exe" -o -name "main_entry" \) -exec mv {} dist/${{ matrix.asset_name }} \;
+          
+          # Verify move
+          ls -lh dist/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4

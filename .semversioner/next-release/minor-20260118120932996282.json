@@ -1,0 +1,4 @@
+{
+  "type": "minor",
+  "description": "feat: Switch to Nuitka for native compilation (8x faster startup), added lazy loading, and optimized CI caching"
+}
