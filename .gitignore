@@ -29,3 +29,4 @@ test_compile.c
 *.dist
 *.onefile-build
 *.bin
+*.spec

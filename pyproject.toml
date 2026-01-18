@@ -33,7 +33,6 @@ build-backend = "setuptools.build_meta"
 dev = [
     "cython>=3.2.4",
     "mypy>=1.19.1",
-    "nuitka>=2.8.9",
     "pyinstaller>=6.18.0",
     "semversioner>=2.0.8",
 ]

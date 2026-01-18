@@ -115,15 +115,6 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
         
-      - name: Activate Virtualenv
-        shell: bash
-        run: |
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            echo "$GITHUB_WORKSPACE/.venv/Scripts" >> $GITHUB_PATH
-          else
-            echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-          fi
-        
       - name: Patch Version
         shell: bash
         run: |
@@ -131,19 +122,21 @@ jobs:
           # Handle cross-platform sed difference if needed, or just use python
           python -c "import re; c = open('pyproject.toml').read(); open('pyproject.toml', 'w').write(re.sub(r'version = \".*\"', f'version = \"$NEW_VERSION\"', c, 1))"
 
-      - name: Build with Nuitka
-        uses: Nuitka/Nuitka-Action@main
-        with:
-          nuitka-version: main
-          script-name: main_entry.py
-          mode: onefile
-          enable-plugins: anti-bloat
-          
+      - name: Build with PyInstaller
+        run: |
+          uv run pyinstaller --clean --onefile --name ${{ matrix.artifact_name }} main_entry.py \
+            --collect-all ai_query \
+            --collect-all lmfetch
+
       - name: Rename Artifact
         shell: bash
         run: |
           mkdir -p dist
-          find build -type f \( -name "main_entry.bin" -o -name "main_entry.exe" -o -name "main_entry" \) -exec mv {} dist/${{ matrix.asset_name }} \;
+          # PyInstaller outputs to dist/ directly with the name given
+          mv dist/${{ matrix.artifact_name }} dist/${{ matrix.asset_name }}
+          
+          # Verify move
+          ls -lh dist/
 
       - name: Sign Binary (macOS)
         if: runner.os == 'macOS'
