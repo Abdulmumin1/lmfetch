@@ -123,6 +123,7 @@ jobs:
           python -c "import re; c = open('pyproject.toml').read(); open('pyproject.toml', 'w').write(re.sub(r'version = \".*\"', f'version = \"$NEW_VERSION\"', c, 1))"
 
       - name: Build with PyInstaller
+        shell: bash
         run: |
           uv run pyinstaller --clean --onefile --name ${{ matrix.artifact_name }} main_entry.py \
             --collect-all ai_query \
