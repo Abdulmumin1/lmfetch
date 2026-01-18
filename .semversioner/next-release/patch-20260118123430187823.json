@@ -1,4 +1,0 @@
-{
-  "type": "patch",
-  "description": "fix(ci): expose uv venv to PATH so Nuitka can find dependencies"
-}

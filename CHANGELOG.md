@@ -1,6 +1,10 @@
 # Changelog
 Note: version releases in the 0.x.y range may introduce breaking changes.
 
+## 0.3.3
+
+- patch: fix(ci): expose uv venv to PATH so Nuitka can find dependencies
+
 ## 0.3.2
 
 - patch: stable release
