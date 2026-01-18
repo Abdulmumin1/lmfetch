@@ -1,6 +1,10 @@
 # Changelog
 Note: version releases in the 0.x.y range may introduce breaking changes.
 
+## 0.3.6
+
+- patch:  fix: codesigning
+
 ## 0.3.5
 
 - patch: feat(ci): switch to PyInstaller for faster builds and stability
