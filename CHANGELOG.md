@@ -1,6 +1,10 @@
 # Changelog
 Note: version releases in the 0.x.y range may introduce breaking changes.
 
+## 0.3.0
+
+- minor: feat: Switch to Nuitka for native compilation (8x faster startup), added lazy loading, and optimized CI caching
+
 ## 0.2.0
 
 - minor: feat: native compilation support via Cython and CI artifact fixes
