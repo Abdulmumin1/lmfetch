@@ -584,10 +584,8 @@ source = { editable = "." }
 dependencies = [
     { name = "ai-query" },
     { name = "aiofiles" },
-    { name = "aiohttp" },
     { name = "click" },
     { name = "rich" },
-    { name = "semversioner" },
     { name = "tiktoken" },
 ]
 
@@ -603,18 +601,17 @@ dev = [
     { name = "mypy" },
     { name = "nuitka" },
     { name = "pyinstaller" },
+    { name = "semversioner" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "ai-query" },
     { name = "aiofiles" },
-    { name = "aiohttp" },
     { name = "click" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-asyncio", marker = "extra == 'dev'" },
     { name = "rich" },
-    { name = "semversioner", specifier = ">=2.0.8" },
     { name = "tiktoken" },
 ]
 provides-extras = ["dev"]
@@ -625,6 +622,7 @@ dev = [
     { name = "mypy", specifier = ">=1.19.1" },
     { name = "nuitka", specifier = ">=2.8.9" },
     { name = "pyinstaller", specifier = ">=6.18.0" },
+    { name = "semversioner", specifier = ">=2.0.8" },
 ]
 
 [[package]]

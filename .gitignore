@@ -24,3 +24,8 @@ __pycache__/
 lmfetch/**/*.c
 test_compile.py
 test_compile.c
+*.build
+*.pyd
+*.dist
+*.onefile-build
+*.bin
