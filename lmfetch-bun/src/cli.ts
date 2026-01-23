@@ -26,6 +26,8 @@ marked.use(
     del: chalk.dim.strikethrough,
     link: chalk.blue,
     href: chalk.blue.underline,
+    table: chalk.white,
+    tableHeader: chalk.bold.yellow,
     // Customize other styling
     tab: 2,
     reflowText: true,
@@ -100,8 +102,9 @@ program
         if (isInteractive) {
           currentSpinner = ora({
             text: "Discovering files...",
-            spinner: "dots",
+            spinner: "star",
             color: "yellow",
+            interval: 150,
           }).start();
         }
       } else if (message.includes("Found") && message.includes("files")) {
@@ -138,8 +141,9 @@ program
         if (isInteractive && !currentSpinner) {
           currentSpinner = ora({
             text: "Analyzing dependencies...",
-            spinner: "dots",
+            spinner: "star",
             color: "yellow",
+            interval: 150,
           }).start();
         }
       } else if (message.includes("Chunking")) {
@@ -152,8 +156,9 @@ program
         if (isInteractive) {
           currentSpinner = ora({
             text: "Chunking files...",
-            spinner: "dots",
+            spinner: "star",
             color: "yellow",
+            interval: 150,
           }).start();
         }
       } else if (message.includes("Created") && message.includes("chunks")) {
@@ -168,8 +173,9 @@ program
         if (isInteractive && !currentSpinner) {
           currentSpinner = ora({
             text: "Ranking chunks...",
-            spinner: "dots",
+            spinner: "star",
             color: "yellow",
+            interval: 150,
           }).start();
         }
       } else if (
@@ -268,8 +274,9 @@ program
       const spinner = isInteractive
         ? ora({
             text: "Generating answer...",
-            spinner: "dots",
+            spinner: "star",
             color: "yellow",
+            interval: 200,
           }).start()
         : null;
 
