@@ -11,18 +11,14 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
-permissions:
-  contents: write
-  id-token: write
-  pull-requests: write
-
 jobs:
   release:
+    name: Release
     runs-on: ubuntu-latest
-    outputs:
-      published: ${{ steps.changesets.outputs.published }}
-      version: ${{ steps.changesets.outputs.publishedPackages[0].version }}
-      has_changesets: ${{ steps.changesets.outputs.hasChangesets }}
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,85 +49,41 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
-  build-binaries:
-    needs: release
-    if: needs.release.outputs.published == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      # We need to fetch the tags or ensure we have the version if needed,
-      # but checking out main is usually fine if the tag was pushed.
-      # Changeset action pushes tags.
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install Dependencies
-        run: bun install
-
-      - name: Build All Platforms
+      - name: Build Binaries
+        if: steps.changesets.outputs.published == 'true'
         working-directory: lmfetch-bun
         run: bun run build:all
 
-      - name: Upload Binary Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: bun-binaries
-          path: |
-            lmfetch-bun/dist/lmfetch-linux-x64
-            lmfetch-bun/dist/lmfetch-linux-arm64
-            lmfetch-bun/dist/lmfetch-darwin-x64
-            lmfetch-bun/dist/lmfetch-darwin-arm64
-            lmfetch-bun/dist/lmfetch-windows-x64.exe
-
-  create-github-release:
-    needs: [release, build-binaries]
-    if: needs.release.outputs.published == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download Binary Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: bun-binaries
-          path: lmfetch-bun/dist
-
-      - name: Create GitHub Release for Bun Package
+      - name: Create GitHub Release
+        if: steps.changesets.outputs.published == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
         run: |
-          VERSION="${{ needs.release.outputs.version }}"
+          # Extract version from the changesets output
+          # Assuming the package name is "lmfetch" based on package.json
+          VERSION=$(echo $PUBLISHED_PACKAGES | jq -r '.[] | select(.name == "lmfetch") | .version')
 
-          # Try to find release notes if they exist in the changeset output log or files?
-          # Changesets action output doesn't provide the body directly in a clean way without parsing.
-          # We can regenerate it or just use "See CHANGELOG" for now, or assume the tag description is enough.
-          # A common pattern is to parse CHANGELOG.md differences. 
-          # For now, let's stick to a simple release note or try to extract from the consumed changeset if possible (but they are gone).
-          # The best way is to read the top entry of the CHANGELOG.md which was just updated.
+          if [ -z "$VERSION" ] || [ "$VERSION" == "null" ]; then
+             echo "Could not parse version for 'lmfetch' from published packages."
+             exit 1
+          fi
 
-          # Extract the latest entry from CHANGELOG.md
-          if [ -f "lmfetch-bun/CHANGELOG.md" ]; then
-             # Simple extraction: lines between the first two headers starting with #
-             # Assuming format is standard.
-             awk '/^## / { if (p) { exit }; p=1; print; next } p { print }' lmfetch-bun/CHANGELOG.md > release_notes.md
+          echo "Detected published version: $VERSION"
+
+          # Create simple release notes
+          if [ -f "CHANGELOG.md" ]; then
+             awk '/^## / { if (p) { exit }; p=1; print; next } p { print }' CHANGELOG.md > release_notes.md
           else
              echo "Release $VERSION" > release_notes.md
           fi
 
           gh release create "lmfetch-bun@v$VERSION" \
-            lmfetch-bun/dist/lmfetch-linux-x64 \
-            lmfetch-bun/dist/lmfetch-linux-arm64 \
-            lmfetch-bun/dist/lmfetch-darwin-x64 \
-            lmfetch-bun/dist/lmfetch-darwin-arm64 \
-            lmfetch-bun/dist/lmfetch-windows-x64.exe \
+            dist/lmfetch-linux-x64 \
+            dist/lmfetch-linux-arm64 \
+            dist/lmfetch-darwin-x64 \
+            dist/lmfetch-darwin-arm64 \
+            dist/lmfetch-windows-x64.exe \
             --title "lmfetch@$VERSION" \
             --notes-file release_notes.md \
             --generate-notes
