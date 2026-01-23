@@ -6,7 +6,7 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "bin": {
-    "lmfetch": "./bin/lmfetch.ts"
+    "lmfetch": "bin/lmfetch.ts"
   },
   "exports": {
     ".": {
@@ -44,7 +44,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Abdulmumin1/lmfetch.git"
+    "url": "git+https://github.com/Abdulmumin1/lmfetch.git"
   },
   "publishConfig": {
     "access": "public",
