@@ -79,11 +79,11 @@ jobs:
           fi
 
           gh release create "lmfetch-bun@v$VERSION" \
-            dist/lmfetch-linux-x64 \
-            dist/lmfetch-linux-arm64 \
-            dist/lmfetch-darwin-x64 \
-            dist/lmfetch-darwin-arm64 \
-            dist/lmfetch-windows-x64.exe \
+            lmfetch-bun/dist/lmfetch-linux-x64 \
+            lmfetch-bun/dist/lmfetch-linux-arm64 \
+            lmfetch-bun/dist/lmfetch-darwin-x64 \
+            lmfetch-bun/dist/lmfetch-darwin-arm64 \
+            lmfetch-bun/dist/lmfetch-windows-x64.exe \
             --title "lmfetch@$VERSION" \
             --notes-file release_notes.md \
             --generate-notes
