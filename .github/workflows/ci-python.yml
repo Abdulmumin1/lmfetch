@@ -1,0 +1,38 @@
+name: CI - Python Package
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "lmfetch/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".python-version"
+      - ".github/workflows/ci-python.yml"
+
+jobs:
+  build:
+    environment: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Build package
+        run: uv build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/

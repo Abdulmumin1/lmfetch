@@ -1,0 +1,161 @@
+name: Release Bun Package
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "lmfetch-bun/**"
+      - ".changeset/**"
+      - ".github/workflows/release-bun.yml"
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.check.outputs.has_changes }}
+      published: ${{ steps.changesets.outputs.published }}
+      version: ${{ steps.changesets.outputs.publishedPackages[0].version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        working-directory: lmfetch-bun
+        run: bun install
+
+      - name: Check for changesets
+        id: check
+        working-directory: lmfetch-bun
+        run: |
+          if [ -z "$(ls -A .changeset/*.md 2>/dev/null | grep -v README)" ]; then
+            echo "No changesets found for Bun package, skipping release."
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release Pull Request or Publish
+        if: steps.check.outputs.has_changes == 'true'
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: cd lmfetch-bun && bun run version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-binaries:
+    needs: prepare
+    if: needs.prepare.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        working-directory: lmfetch-bun
+        run: bun install
+
+      - name: Build All Platforms
+        working-directory: lmfetch-bun
+        run: bun run build:all
+
+      - name: Upload Binary Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bun-binaries
+          path: |
+            lmfetch-bun/dist/lmfetch-linux-x64
+            lmfetch-bun/dist/lmfetch-linux-arm64
+            lmfetch-bun/dist/lmfetch-darwin-x64
+            lmfetch-bun/dist/lmfetch-darwin-arm64
+            lmfetch-bun/dist/lmfetch-windows-x64.exe
+
+  publish:
+    environment: release
+    needs: [prepare, build-binaries]
+    if: needs.prepare.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write  # Required for npm OIDC provenance
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        working-directory: lmfetch-bun
+        run: bun install
+
+      - name: Download Binary Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bun-binaries
+          path: lmfetch-bun/dist
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Version and Commit
+        working-directory: lmfetch-bun
+        run: |
+          bunx changeset version
+          cd ..
+          git add .
+          git commit -m "chore: version bun packages" || echo "No changes to commit"
+          git push origin main || echo "No changes to push"
+
+      - name: Publish to npm with OIDC provenance
+        working-directory: lmfetch-bun
+        run: bunx changeset publish
+        env:
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Create GitHub Release for Bun Package
+        if: needs.prepare.outputs.version != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+
+          # Read changeset content for release notes
+          if [ -f "lmfetch-bun/.changeset/sour-friends-like.md" ]; then
+            tail -n +4 lmfetch-bun/.changeset/sour-friends-like.md > release_notes.md
+          else
+            echo "See CHANGELOG.md for details." > release_notes.md
+          fi
+
+          gh release create "lmfetch-bun@v$VERSION" \
+            lmfetch-bun/dist/lmfetch-linux-x64 \
+            lmfetch-bun/dist/lmfetch-linux-arm64 \
+            lmfetch-bun/dist/lmfetch-darwin-x64 \
+            lmfetch-bun/dist/lmfetch-darwin-arm64 \
+            lmfetch-bun/dist/lmfetch-windows-x64.exe \
+            --title "lmfetch-bun@$VERSION" \
+            --notes-file release_notes.md \
+            --generate-notes
