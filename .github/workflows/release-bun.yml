@@ -78,7 +78,7 @@ jobs:
              echo "Release $VERSION" > release_notes.md
           fi
 
-          gh release create "lmfetch-bun@v$VERSION" \
+          gh release create "lmfetch@v$VERSION" \
             lmfetch-bun/dist/lmfetch-linux-x64 \
             lmfetch-bun/dist/lmfetch-linux-arm64 \
             lmfetch-bun/dist/lmfetch-darwin-x64 \
