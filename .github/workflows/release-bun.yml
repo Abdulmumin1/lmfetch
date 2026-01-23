@@ -33,7 +33,6 @@ jobs:
           bun-version: latest
 
       - name: Install Dependencies
-      - name: Install Dependencies
         run: bun install
 
       - name: Check for changesets
@@ -105,7 +104,6 @@ jobs:
           bun-version: latest
           registry-url: "https://registry.npmjs.org"
 
-      - name: Install Dependencies
       - name: Install Dependencies
         run: bun install
 
