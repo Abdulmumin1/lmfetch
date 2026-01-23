@@ -1,4 +1,4 @@
-name: Release
+name: Release Python Package
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
       - "setup.py"
       - "install.sh"
       - ".semversioner/**"
-      - ".github/workflows/release.yml"
+      - ".github/workflows/release-python.yml"
       - ".python-version"
 
 permissions:
@@ -59,7 +59,7 @@ jobs:
           # This allows us to pass the version to builders
           uv run semversioner release
           uv run semversioner changelog > CHANGELOG.md
-          
+
           NEW_VERSION=$(uv run semversioner current-version)
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
@@ -124,7 +124,7 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --all-extras --dev
-        
+
       - name: Patch Version
         shell: bash
         run: |
@@ -145,7 +145,7 @@ jobs:
           mkdir -p dist
           # PyInstaller outputs to dist/ directly with the name given
           mv dist/${{ matrix.artifact_name }} dist/${{ matrix.asset_name }}
-          
+
           # Verify move
           ls -lh dist/
 
@@ -171,7 +171,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
@@ -179,18 +179,18 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
+
       - name: Commit Release & Tag
         run: |
           # NOW we actually commit the release
           uv run semversioner release
           uv run semversioner changelog > CHANGELOG.md
-          
+
           NEW_VERSION="${{ needs.prepare.outputs.version }}"
-          
+
           # Patch pyproject.toml again for the commit
           sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
-          
+
           git add .
           git commit -m "chore: release $NEW_VERSION"
           git tag -a "v$NEW_VERSION" -m "Release $NEW_VERSION"
@@ -205,14 +205,14 @@ jobs:
         run: |
           mkdir -p release_assets/github
           mkdir -p release_assets/pypi
-          
+
           # Move pypi dists to both locations
           cp artifacts/pypi-dist/* release_assets/pypi/
           cp artifacts/pypi-dist/* release_assets/github/
-          
+
           # Move binaries ONLY to github assets
           find artifacts -name "lmfetch-*" -type f -exec cp {} release_assets/github/ \;
-          
+
           echo "GitHub Assets:"
           ls -R release_assets/github/
           echo "PyPI Assets:"
@@ -223,7 +223,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ needs.prepare.outputs.version }}"
-          
+
           # Extract release notes properly
           python -c "import sys, re; content=open('CHANGELOG.md').read(); match = re.search(r'## ' + re.escape('$VERSION') + r'\n(.*?)(?=\n## |\Z)', content, re.DOTALL); print(match.group(1).strip() if match else 'See CHANGELOG.md for details')" > release_notes.md
 
@@ -237,4 +237,3 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages_dir: release_assets/pypi/
-          password: ${{ secrets.PYPI_API_TOKEN }}

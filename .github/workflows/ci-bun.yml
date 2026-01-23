@@ -1,0 +1,49 @@
+name: CI - Bun Package
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "lmfetch-bun/**"
+      - ".github/workflows/ci-bun.yml"
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        bun-version: [latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ matrix.bun-version }}
+
+      - name: Install Dependencies
+        working-directory: lmfetch-bun
+        run: bun install
+
+      - name: Type Check
+        working-directory: lmfetch-bun
+        run: bun run tsc --noEmit
+
+      - name: Build Binary
+        working-directory: lmfetch-bun
+        run: bun run build
+
+      - name: Test Binary (Unix)
+        if: runner.os != 'Windows'
+        working-directory: lmfetch-bun
+        run: |
+          chmod +x dist/lmfetch
+          ./dist/lmfetch --help
+
+      - name: Test Binary (Windows)
+        if: runner.os == 'Windows'
+        working-directory: lmfetch-bun
+        run: |
+          dist/lmfetch.exe --help

@@ -1,0 +1,76 @@
+{
+  "name": "lmfetch",
+  "version": "0.1.0",
+  "description": "Lightning-fast code context fetcher for LLMs",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "bin": {
+    "lmfetch": "./bin/lmfetch.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "dev": "bun run bin/lmfetch.ts",
+    "build": "bun build --compile --minify bin/lmfetch.ts --outfile=dist/lmfetch",
+    "build:linux-x64": "bun build --compile --minify --target=bun-linux-x64 bin/lmfetch.ts --outfile=dist/lmfetch-linux-x64",
+    "build:linux-arm64": "bun build --compile --minify --target=bun-linux-arm64 bin/lmfetch.ts --outfile=dist/lmfetch-linux-arm64",
+    "build:darwin-x64": "bun build --compile --minify --target=bun-darwin-x64 bin/lmfetch.ts --outfile=dist/lmfetch-darwin-x64",
+    "build:darwin-arm64": "bun build --compile --minify --target=bun-darwin-arm64 bin/lmfetch.ts --outfile=dist/lmfetch-darwin-arm64",
+    "build:windows-x64": "bun build --compile --minify --target=bun-windows-x64 bin/lmfetch.ts --outfile=dist/lmfetch-windows-x64.exe",
+    "build:all": "bun run build:linux-x64 && bun run build:linux-arm64 && bun run build:darwin-x64 && bun run build:darwin-arm64 && bun run build:windows-x64",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "bun run build:all && changeset publish"
+  },
+  "keywords": [
+    "llm",
+    "context",
+    "code-search",
+    "ai",
+    "semantic-search",
+    "bun"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Abdulmumin1/lmfetch.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^1.0.0",
+    "@ai-sdk/google": "^1.0.0",
+    "@ai-sdk/openai": "^1.0.0",
+    "ai": "^4.0.0",
+    "chalk": "^5.3.0",
+    "cli-highlight": "^2.1.11",
+    "cli-progress": "^3.12.0",
+    "commander": "^12.0.0",
+    "ignore": "^6.0.0",
+    "js-tiktoken": "^1.0.0",
+    "marked": "^17.0.1",
+    "marked-terminal": "^7.3.0",
+    "ora": "^8.0.0",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.8",
+    "@types/bun": "latest",
+    "@types/cli-progress": "^3.11.6",
+    "@types/marked-terminal": "^6.1.1",
+    "typescript": "^5.0.0"
+  }
+}
