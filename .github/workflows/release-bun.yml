@@ -52,7 +52,8 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          version: cd lmfetch-bun && bun run version
+          cwd: lmfetch-bun
+          version: bun run version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
