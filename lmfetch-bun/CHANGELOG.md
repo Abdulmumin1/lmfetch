@@ -1,10 +1,58 @@
 # lmfetch-bun: Final UI Improvements
 
+## 0.2.0
+
+### Minor Changes
+
+- 98e1074: Initial Bun.js release of lmfetch - Lightning-fast code context fetcher for LLMs
+
+  ## Features
+
+  - **~0.25s startup time** vs 30s with PyInstaller
+  - Smart keyword-based ranking with stopword filtering and stemming
+  - Optional semantic (embedding) ranking with `-s` flag
+  - Beautiful terminal UI with yellow theme and star spinner
+  - Markdown rendering with syntax highlighting and table support
+  - SQLite caching for fast repeated queries
+  - Multi-platform binaries (Linux, macOS, Windows - x64 and ARM64)
+  - Programmatic API for use as a JavaScript library
+
+  ## Usage
+
+  ```bash
+  # CLI usage
+  lmfetch . "how does authentication work"
+
+  # With semantic ranking
+  lmfetch . "explain the API" -s
+
+  # Output to file
+  lmfetch . "database models" -o context.md
+  ```
+
+  ## Programmatic API
+
+  ```typescript
+  import { ContextBuilder, query } from "lmfetch";
+
+  // Quick query
+  const answer = await query(".", "how does auth work");
+
+  // Advanced usage
+  const builder = new ContextBuilder({
+    path: ".",
+    query: "authentication flow",
+    budget: "100k",
+  });
+  const result = await builder.build();
+  ```
+
 ## Changes Made (v0.2.0)
 
 ### 🎯 Python-Style UI
 
 **New Output Format:**
+
 ```
 Query   how does caching work
 Files   36/159 [████████████░░░░░░░░] 69%
@@ -20,21 +68,25 @@ gemini-2.0-flash
 ### Key Improvements:
 
 1. **Progress Bar**
+
    - Shows files processed with visual progress bar
    - Format: `Files   X/Y [█████░░░] %`
    - Uses █ for filled, ░ for unfilled
    - Matches Python version exactly
 
 2. **Token Usage Display**
+
    - Shows tokens used vs budget
    - Visual progress bar showing % of budget used
    - Format: `Tokens  34,999 [████░░░] 70%`
 
 3. **Model Display**
+
    - Shows which model is being used
    - Appears before generating answer
 
 4. **Spinner During Generation**
+
    - Shows "Generating answer..." with dots spinner
    - Only appears while waiting for LLM response
    - Automatically stops when answer arrives
@@ -45,22 +97,26 @@ gemini-2.0-flash
    - Raw markdown in non-interactive mode
 
 ### Removed:
+
 - ❌ Complex markdown parser (was causing issues)
 - ❌ Heavy syntax highlighting (cli-highlight still used for progress bars)
 - ❌ Bordered code blocks (too much visual noise)
 - ❌ Excessive color coding
 
 ### Dependencies:
+
 - Added: `cli-progress` for progress bars
 - Removed: `marked`, `marked-terminal` (too complex)
 - Kept: `cli-highlight` (for progress bar rendering only)
 
 ### Binary Size:
+
 - Now: 63MB
 - Before: 65MB
 - Saved: 2MB by removing heavy deps
 
 ### User Experience:
+
 ✅ Clean, professional output like Python version
 ✅ Clear progress indication
 ✅ Model name displayed
@@ -71,6 +127,7 @@ gemini-2.0-flash
 ## Output Modes:
 
 ### Interactive (TTY):
+
 - Shows query
 - Progress bars
 - Token usage with bar
@@ -79,6 +136,7 @@ gemini-2.0-flash
 - Raw answer text
 
 ### Non-Interactive (Piped):
+
 - No progress bars
 - No spinners
 - Just the answer
