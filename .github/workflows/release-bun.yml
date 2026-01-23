@@ -38,7 +38,6 @@ jobs:
 
       - name: Check for changesets
         id: check
-        working-directory: lmfetch-bun
         run: |
           if [ -z "$(ls -A .changeset/*.md 2>/dev/null | grep -v README)" ]; then
             echo "No changesets found for Bun package, skipping release."
@@ -52,8 +51,7 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          cwd: lmfetch-bun
-          version: bun run version
+          version: bunx changeset version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -124,16 +122,13 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Version and Commit
-        working-directory: lmfetch-bun
         run: |
           bunx changeset version
-          cd ..
           git add .
           git commit -m "chore: version bun packages" || echo "No changes to commit"
           git push origin main || echo "No changes to push"
 
       - name: Publish to npm with OIDC provenance
-        working-directory: lmfetch-bun
         run: bunx changeset publish
         env:
           NPM_CONFIG_PROVENANCE: true
@@ -146,8 +141,8 @@ jobs:
           VERSION="${{ needs.prepare.outputs.version }}"
 
           # Read changeset content for release notes
-          if [ -f "lmfetch-bun/.changeset/sour-friends-like.md" ]; then
-            tail -n +4 lmfetch-bun/.changeset/sour-friends-like.md > release_notes.md
+          if [ -f ".changeset/sour-friends-like.md" ]; then
+            tail -n +4 .changeset/sour-friends-like.md > release_notes.md
           else
             echo "See CHANGELOG.md for details." > release_notes.md
           fi
