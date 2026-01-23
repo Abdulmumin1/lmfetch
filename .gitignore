@@ -30,3 +30,5 @@ test_compile.c
 *.onefile-build
 *.bin
 *.spec
+node_modules/
+.DS_Store
