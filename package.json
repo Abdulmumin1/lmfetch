@@ -1,0 +1,7 @@
+{
+  "name": "lmfetch-monorepo",
+  "private": "false",
+  "workspaces": [
+    "lmfetch-bun"
+  ]
+}
