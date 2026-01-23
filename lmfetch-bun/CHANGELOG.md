@@ -1,5 +1,11 @@
 # lmfetch-bun: Final UI Improvements
 
+## 0.4.0
+
+### Minor Changes
+
+- 757586a: Initial Bun.js release of lmfetch - Lightning-fast code context fetcher for LLMs
+
 ## 0.3.0
 
 ### Minor Changes
