@@ -1,10 +1,26 @@
 {
   "name": "lmfetch",
   "version": "0.1.0",
+  "description": "Lightning-fast code context fetcher for LLMs",
   "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "bin": {
     "lmfetch": "./bin/lmfetch.ts"
   },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "bin",
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "bun run bin/lmfetch.ts",
     "build": "bun build --compile --minify bin/lmfetch.ts --outfile=dist/lmfetch",
@@ -13,7 +29,24 @@
     "build:darwin-x64": "bun build --compile --minify --target=bun-darwin-x64 bin/lmfetch.ts --outfile=dist/lmfetch-darwin-x64",
     "build:darwin-arm64": "bun build --compile --minify --target=bun-darwin-arm64 bin/lmfetch.ts --outfile=dist/lmfetch-darwin-arm64",
     "build:windows-x64": "bun build --compile --minify --target=bun-windows-x64 bin/lmfetch.ts --outfile=dist/lmfetch-windows-x64.exe",
-    "build:all": "bun run build:linux-x64 && bun run build:linux-arm64 && bun run build:darwin-x64 && bun run build:darwin-arm64 && bun run build:windows-x64"
+    "build:all": "bun run build:linux-x64 && bun run build:linux-arm64 && bun run build:darwin-x64 && bun run build:darwin-arm64 && bun run build:windows-x64",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "bun run build:all && changeset publish"
+  },
+  "keywords": [
+    "llm",
+    "context",
+    "code-search",
+    "ai",
+    "semantic-search",
+    "bun"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Abdulmumin1/lmfetch.git"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.0.0",

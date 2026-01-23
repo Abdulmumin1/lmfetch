@@ -1,0 +1,25 @@
+# Development files
+.changeset/
+.github/
+tsconfig.json
+bun.lockb
+
+# Build artifacts (we want dist/ binaries in GitHub releases, not npm)
+dist/
+
+# Development
+*.test.ts
+*.spec.ts
+__tests__/
+__fixtures__/
+
+# Cache and logs
+.cache/
+*.log
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

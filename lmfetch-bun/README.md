@@ -29,11 +29,59 @@ The Python/PyInstaller version suffered from ~30s startup time on macOS due to G
 ## Installation
 
 ```bash
-# From source
+# Install globally from npm
+npm install -g lmfetch
+
+# Or use with bun
+bun install -g lmfetch
+
+# Or from source
+git clone https://github.com/Abdulmumin1/lmfetch.git
+cd lmfetch
 bun install
 bun run build
 
 # The binary will be at dist/lmfetch
+```
+
+## Using as a Library
+
+```bash
+npm install lmfetch
+# or
+bun add lmfetch
+```
+
+```typescript
+import { ContextBuilder, query, fetchContext } from "lmfetch";
+
+// Quick query with LLM
+const answer = await query(".", "how does authentication work", {
+  model: "gemini-2.0-flash",
+  budget: "100k",
+});
+console.log(answer);
+
+// Fetch context only
+const context = await fetchContext(".", "database models", {
+  budget: "50k",
+  semantic: false,  // Use keyword-only ranking (default)
+});
+console.log(context);
+
+// Advanced usage with ContextBuilder
+const builder = new ContextBuilder({
+  path: ".",
+  query: "API implementation",
+  budget: "100k",
+  fast: true,  // Keyword-only ranking
+  onProgress: (msg) => console.log(msg),
+});
+
+const result = await builder.build();
+console.log(`Context: ${result.context}`);
+console.log(`Tokens: ${result.tokens}`);
+console.log(`Files processed: ${result.filesProcessed}`);
 ```
 
 ## Usage
