@@ -14,7 +14,7 @@ BINARY_NAME="lmfetch"
 # Detect OS
 detect_os() {
     case "$(uname -s)" in
-        Darwin*) echo "macos" ;;
+        Darwin*) echo "darwin" ;;
         Linux*)  echo "linux" ;;
         MINGW*|MSYS*|CYGWIN*) echo "windows" ;;
         *) echo "unsupported" ;;
@@ -26,7 +26,7 @@ detect_arch() {
     local arch
     arch=$(uname -m)
     case "$arch" in
-        x86_64|amd64) echo "amd64" ;;
+        x86_64|amd64) echo "x64" ;;
         aarch64|arm64) echo "arm64" ;;
         *) echo "unsupported" ;;
     esac
@@ -34,7 +34,7 @@ detect_arch() {
 
 # Check for Rosetta on macOS
 check_rosetta() {
-    if [ "$(detect_os)" = "macos" ] && [ "$(detect_arch)" = "amd64" ]; then
+    if [ "$(detect_os)" = "darwin" ] && [ "$(detect_arch)" = "x64" ]; then
         if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null || echo 0)" = "1" ]; then
             echo "arm64"
             return
@@ -52,10 +52,10 @@ if [ "$os" = "unsupported" ] || [ "$arch" = "unsupported" ]; then
 fi
 
 # Build filename matching release.yml assets
-# lmfetch-linux-amd64
-# lmfetch-windows-amd64.exe
-# lmfetch-macos-amd64
-# lmfetch-macos-arm64
+# lmfetch-linux-x64
+# lmfetch-windows-x64.exe
+# lmfetch-darwin-x64
+# lmfetch-darwin-arm64
 
 if [ "$os" = "windows" ]; then
     filename="${BINARY_NAME}-${os}-${arch}.exe"
