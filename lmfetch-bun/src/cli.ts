@@ -3,7 +3,7 @@
  */
 import { Command } from "commander";
 import chalk from "chalk";
-import ora from "ora";
+import ora, { Ora } from "ora";
 import cliProgress from "cli-progress";
 import { marked } from "marked";
 import { markedTerminal } from "marked-terminal";
@@ -27,7 +27,6 @@ marked.use(
     link: chalk.blue,
     href: chalk.blue.underline,
     table: chalk.white,
-    tableHeader: chalk.bold.yellow,
     // Customize other styling
     tab: 2,
     reflowText: true,
@@ -93,7 +92,7 @@ program
 
     let totalFiles = 0;
     let progressBar: cliProgress.SingleBar | null = null;
-    let currentSpinner: ReturnType<typeof ora> | null = null;
+    let currentSpinner: Ora | null = null;
 
     const progress = (message: string) => {
       // Parse progress messages
@@ -137,7 +136,7 @@ program
         }
       } else if (message.includes("Analyzing")) {
         // Show spinner during analysis
-        if (progressBar) progressBar.update(Math.floor(totalFiles * 0.1));
+        progressBar?.update(Math.floor(totalFiles * 0.1));
         if (isInteractive && !currentSpinner) {
           currentSpinner = ora({
             text: "Analyzing dependencies...",
@@ -152,7 +151,7 @@ program
           currentSpinner.stop();
           currentSpinner = null;
         }
-        if (progressBar) progressBar.update(Math.floor(totalFiles * 0.3));
+        progressBar?.update(Math.floor(totalFiles * 0.3));
         if (isInteractive) {
           currentSpinner = ora({
             text: "Chunking files...",
@@ -167,7 +166,7 @@ program
           currentSpinner.stop();
           currentSpinner = null;
         }
-        if (progressBar) progressBar.update(Math.floor(totalFiles * 0.6));
+        progressBar?.update(Math.floor(totalFiles * 0.6));
       } else if (message.includes("Ranking")) {
         // Show ranking spinner
         if (isInteractive && !currentSpinner) {
@@ -199,7 +198,7 @@ program
           currentSpinner.stop();
           currentSpinner = null;
         }
-        if (progressBar) progressBar.update(Math.floor(totalFiles * 0.95));
+        progressBar?.update(Math.floor(totalFiles * 0.95));
       }
 
       // Don't show other progress in interactive mode when we have progress bar
@@ -224,12 +223,10 @@ program
       const result = await builder.build();
 
       // Clean up any remaining spinners/progress
-      if (currentSpinner) {
-        currentSpinner.stop();
-      }
+      (currentSpinner as Ora | null)?.stop();
       if (progressBar) {
-        progressBar.update(result.filesProcessed);
-        progressBar.stop();
+        (progressBar as cliProgress.SingleBar).update(result.filesProcessed);
+        (progressBar as cliProgress.SingleBar).stop();
       }
 
       // Show token usage
@@ -298,12 +295,8 @@ program
       }
       console.log();
     } catch (err) {
-      if (currentSpinner) {
-        currentSpinner.stop();
-      }
-      if (progressBar) {
-        progressBar.stop();
-      }
+      (currentSpinner as Ora | null)?.stop();
+      (progressBar as cliProgress.SingleBar | null)?.stop();
       console.error(chalk.red(`Error: ${(err as Error).message}`));
       process.exit(1);
     }

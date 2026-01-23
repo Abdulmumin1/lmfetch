@@ -17,9 +17,7 @@
   "files": [
     "src",
     "bin",
-    "dist",
-    "README.md",
-    "LICENSE"
+    "dist"
   ],
   "scripts": {
     "dev": "bun run bin/lmfetch.ts",
@@ -71,6 +69,8 @@
   "devDependencies": {
     "@changesets/cli": "^2.29.8",
     "@types/bun": "latest",
+    "@types/cli-progress": "^3.11.6",
+    "@types/marked-terminal": "^6.1.1",
     "typescript": "^5.0.0"
   }
 }

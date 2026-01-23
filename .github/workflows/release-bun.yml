@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      id-token: write  # Required for npm OIDC provenance
+      id-token: write # Required for npm OIDC provenance
     steps:
       - uses: actions/checkout@v4
         with:
@@ -156,6 +156,6 @@ jobs:
             lmfetch-bun/dist/lmfetch-darwin-x64 \
             lmfetch-bun/dist/lmfetch-darwin-arm64 \
             lmfetch-bun/dist/lmfetch-windows-x64.exe \
-            --title "lmfetch-bun@$VERSION" \
+            --title "lmfetch@$VERSION" \
             --notes-file release_notes.md \
             --generate-notes
