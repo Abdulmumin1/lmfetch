@@ -25,6 +25,8 @@ export interface BuilderOptions {
   includes?: string[];
   /** Glob patterns to exclude */
   excludes?: string[];
+  /** Exact relative candidate files to process */
+  candidateFiles?: string[];
   /** Skip semantic ranking (faster) */
   fast?: boolean;
   /** Process large files */
@@ -71,6 +73,7 @@ export class ContextBuilder {
     const source = createSource(this.options.path, {
       includes: this.options.includes,
       excludes: this.options.excludes,
+      paths: this.options.candidateFiles,
       forceLarge: this.options.forceLarge,
     });
 

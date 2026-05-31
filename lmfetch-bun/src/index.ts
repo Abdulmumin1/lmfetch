@@ -20,6 +20,34 @@ export { queryWithContext } from "./llm";
 export { countTokens, parseBudget } from "./tokens";
 
 export { getCache } from "./cache";
+export { buildContextWithSearch } from "./context-search";
+
+export {
+  findFiles,
+  readCode,
+  renderFindFilesResults,
+  renderReadCodeResult,
+  renderSearchResults,
+  searchCode,
+} from "./search";
+export type {
+  FindFileResult,
+  FindFilesOptions,
+  FindFilesResponse,
+  ReadCodeLine,
+  ReadCodeOptions,
+  ReadCodeResponse,
+  SearchCodeOptions,
+  SearchFilePriority,
+  SearchFileResult,
+  SearchMatch,
+  SearchNextStep,
+  SearchProviderMode,
+  SearchReason,
+  SearchReasonSignal,
+  SearchResponse,
+  SearchSummary,
+} from "./search";
 
 /**
  * Quick helper to fetch context for a query
@@ -36,20 +64,16 @@ export async function fetchContext(
     onProgress?: (message: string) => void;
   }
 ) {
-  const { ContextBuilder } = await import("./builder");
+  const { buildContextWithSearch } = await import("./context-search");
 
-  const builder = new ContextBuilder({
-    path,
-    query,
+  const result = await buildContextWithSearch(path, query, {
     budget: options?.budget,
     includes: options?.includes,
     excludes: options?.excludes,
-    fast: !(options?.semantic ?? false),  // Default to fast (keyword-only)
+    fast: !(options?.semantic ?? false),
     forceLarge: options?.forceLarge,
     onProgress: options?.onProgress,
   });
-
-  const result = await builder.build();
   return result.context;
 }
 
@@ -68,18 +92,15 @@ export async function query(
     onProgress?: (message: string) => void;
   }
 ) {
-  const { ContextBuilder } = await import("./builder");
+  const { buildContextWithSearch } = await import("./context-search");
 
-  const builder = new ContextBuilder({
-    path,
-    query: queryText,
+  const result = await buildContextWithSearch(path, queryText, {
     budget: options?.budget,
     includes: options?.includes,
     excludes: options?.excludes,
-    fast: !(options?.semantic ?? false),  // Default to fast (keyword-only)
+    fast: !(options?.semantic ?? false),
+    onProgress: options?.onProgress,
   });
-
-  const result = await builder.build();
   const { queryWithContext } = await import("./llm");
 
   const answer = await queryWithContext(
