@@ -76,6 +76,7 @@
     "@types/bun": "latest",
     "@types/cli-progress": "^3.11.6",
     "@types/marked-terminal": "^6.1.1",
+    "bun-types": "latest",
     "typescript": "^5.0.0"
   }
 }
