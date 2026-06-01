@@ -22,6 +22,18 @@ function resolveOptions(options: SearchCodeOptions = {}): ResolvedSearchCodeOpti
   };
 }
 
+function broadenQuery(query: string): string | undefined {
+  const terms = Array.from(new Set(query.match(/[A-Za-z0-9_.$/-]{3,}/g) ?? []));
+  if (terms.length < 2) {
+    return undefined;
+  }
+
+  return terms
+    .slice(0, 8)
+    .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+}
+
 async function chooseProvider(mode: SearchProviderMode, options: ResolvedSearchCodeOptions): Promise<SearchProvider> {
   if (mode === "ripgrep") {
     return new RipgrepSearchProvider();
@@ -57,13 +69,31 @@ export async function searchCode(
   const provider = await chooseProvider(resolvedOptions.provider, resolvedOptions);
 
   try {
-    return await provider.searchCode({
+    const result = await provider.searchCode({
       userPath: path,
       rootPath,
       query,
       options: resolvedOptions,
       progress,
     });
+
+    const expandedQuery = result.files.length === 0 ? broadenQuery(query) : undefined;
+    if (!expandedQuery) {
+      return result;
+    }
+
+    const expanded = await provider.searchCode({
+      userPath: path,
+      rootPath,
+      query: expandedQuery,
+      options: resolvedOptions,
+      progress,
+    });
+    expanded.query = query;
+    expanded.warnings.unshift(
+      `no exact matches; broadened search to individual terms: ${expandedQuery}`,
+    );
+    return expanded;
   } catch (error) {
     if (provider.name === "fff" && resolvedOptions.provider === "auto") {
       const fallback = new RipgrepSearchProvider();

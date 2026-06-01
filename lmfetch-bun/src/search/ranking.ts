@@ -19,6 +19,8 @@ const LOW_PRIORITY_DIRS = new Set([
   "vendor",
   "node_modules",
   "third_party",
+  ".research",
+  ".chump",
 ]);
 
 const TEST_DIRS = new Set(["test", "tests", "testing", "spec", "specs"]);
@@ -136,7 +138,9 @@ export function filePriorityValue(path: string): 0 | 1 | 2 {
     filename.endsWith(".mdx") ||
     filename.endsWith(".rst") ||
     filename === "license" ||
-    filename === "changelog.md"
+    filename === "changelog.md" ||
+    filename.endsWith(".lock") ||
+    filename.endsWith(".lockb")
   ) {
     return 2;
   }

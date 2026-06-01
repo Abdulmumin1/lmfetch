@@ -14,6 +14,12 @@ import { getCache } from "./cache";
 import { countTokens, parseBudget } from "./tokens";
 import { chunkFilesParallel, tokenCache } from "./chunking-parallel";
 
+export interface CandidateLineRange {
+  path: string;
+  startLine: number;
+  endLine: number;
+}
+
 export interface BuilderOptions {
   /** Local path or GitHub URL */
   path: string;
@@ -27,6 +33,8 @@ export interface BuilderOptions {
   excludes?: string[];
   /** Exact relative candidate files to process */
   candidateFiles?: string[];
+  /** Optional line windows to keep inside candidate files */
+  candidateLineRanges?: CandidateLineRange[];
   /** Skip semantic ranking (faster) */
   fast?: boolean;
   /** Process large files */
@@ -152,6 +160,8 @@ export class ContextBuilder {
 
     this.progress(`Created ${allChunks.length} chunks`);
 
+    const candidateChunks = this.applyCandidateLineRanges(allChunks);
+
     // Step 4: Rank chunks
     this.progress("Ranking chunks...");
     const ranker = new HybridRanker(combinedImportance, {
@@ -159,7 +169,7 @@ export class ContextBuilder {
       onProgress: this.progress,
     });
 
-    const rankedChunks = await ranker.rank(allChunks, this.options.query);
+    const rankedChunks = await ranker.rank(candidateChunks, this.options.query);
 
     // Step 5: Select chunks within budget
     this.progress("Selecting best chunks...");
@@ -178,8 +188,53 @@ export class ContextBuilder {
       chunks: selectedChunks,
       tokens,
       filesProcessed: files.length,
-      chunksCreated: allChunks.length,
+      chunksCreated: candidateChunks.length,
     };
+  }
+
+  private applyCandidateLineRanges(chunks: Chunk[]): Chunk[] {
+    const ranges = this.options.candidateLineRanges;
+    if (!ranges?.length) {
+      return chunks;
+    }
+
+    const rangesByPath = new Map<string, CandidateLineRange[]>();
+    for (const range of ranges) {
+      const existing = rangesByPath.get(range.path) ?? [];
+      existing.push(range);
+      rangesByPath.set(range.path, existing);
+    }
+
+    const narrowed: Chunk[] = [];
+    for (const chunk of chunks) {
+      const fileRanges = rangesByPath.get(chunk.relativePath);
+      if (!fileRanges) {
+        narrowed.push(chunk);
+        continue;
+      }
+
+      for (const range of fileRanges) {
+        const startLine = Math.max(chunk.startLine, range.startLine);
+        const endLine = Math.min(chunk.endLine, range.endLine);
+        if (startLine > endLine) {
+          continue;
+        }
+
+        const offsetStart = startLine - chunk.startLine;
+        const offsetEnd = endLine - chunk.startLine + 1;
+        const content = chunk.content.split("\n").slice(offsetStart, offsetEnd).join("\n");
+        narrowed.push({
+          ...chunk,
+          id: `${chunk.id}:${startLine}-${endLine}`,
+          content,
+          startLine,
+          endLine,
+          tokens: tokenCache.count(content),
+        });
+      }
+    }
+
+    return narrowed;
   }
 
   /**

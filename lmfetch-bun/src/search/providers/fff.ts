@@ -14,6 +14,9 @@ import {
   filePriority,
   summarizeFiles,
 } from "../ranking";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const dynamicImport = new Function(
   "specifier",
@@ -31,9 +34,26 @@ async function loadFffModule(): Promise<any | null> {
     cachedModule = await dynamicImport("@ff-labs/fff-node");
     return cachedModule;
   } catch {
-    cachedModule = null;
-    return null;
+    const candidates = [
+      join(process.cwd(), "node_modules", "@ff-labs", "fff-node", "dist", "src", "index.js"),
+      join(process.cwd(), "lmfetch-bun", "node_modules", "@ff-labs", "fff-node", "dist", "src", "index.js"),
+    ];
+
+    for (const candidate of candidates) {
+      if (!existsSync(candidate)) {
+        continue;
+      }
+      try {
+        cachedModule = await dynamicImport(pathToFileURL(candidate).href);
+        return cachedModule;
+      } catch {
+        // Try the next install layout.
+      }
+    }
   }
+
+  cachedModule = null;
+  return null;
 }
 
 function inferMode(query: string): "plain" | "regex" {

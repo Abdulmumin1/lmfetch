@@ -6,7 +6,8 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "bin": {
-    "lmfetch": "bin/lmfetch.ts"
+    "lmfetch": "bin/lmfetch.ts",
+    "lmfetch-mcp": "bin/lmfetch-mcp.ts"
   },
   "exports": {
     ".": {
@@ -21,7 +22,7 @@
   ],
   "scripts": {
     "dev": "bun run bin/lmfetch.ts",
-    "build": "bun build --compile --minify bin/lmfetch.ts --outfile=dist/lmfetch",
+    "build": "bun build --compile --minify bin/lmfetch.ts --outfile=dist/lmfetch && bun build --compile --minify bin/lmfetch-mcp.ts --outfile=dist/lmfetch-mcp",
     "build:linux-x64": "bun build --compile --minify --target=bun-linux-x64 bin/lmfetch.ts --outfile=dist/lmfetch-linux-x64",
     "build:linux-arm64": "bun build --compile --minify --target=bun-linux-arm64 bin/lmfetch.ts --outfile=dist/lmfetch-linux-arm64",
     "build:darwin-x64": "bun build --compile --minify --target=bun-darwin-x64 bin/lmfetch.ts --outfile=dist/lmfetch-darwin-x64",
@@ -54,6 +55,7 @@
     "@ai-sdk/anthropic": "^1.0.0",
     "@ai-sdk/google": "^1.0.0",
     "@ai-sdk/openai": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "ai": "^4.0.0",
     "chalk": "^5.3.0",
     "cli-highlight": "^2.1.11",

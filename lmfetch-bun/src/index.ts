@@ -21,6 +21,7 @@ export { countTokens, parseBudget } from "./tokens";
 
 export { getCache } from "./cache";
 export { buildContextWithSearch } from "./context-search";
+export { createMcpServer, runMcpServer } from "./mcp";
 
 export {
   findFiles,
