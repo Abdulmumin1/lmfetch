@@ -1,6 +1,39 @@
 import { describeScope, truncateLine } from "./ranking";
 import type { FindFilesResponse, ReadCodeResponse, SearchResponse } from "./types";
 
+interface ReasonedFile {
+  path: string;
+  reasons: Array<{ note: string }>;
+}
+
+function appendGroupedReasons(parts: string[], files: ReasonedFile[]): void {
+  const reasonPaths = new Map<string, string[]>();
+
+  for (const file of files) {
+    const uniqueNotes = new Set(file.reasons.map((reason) => reason.note));
+
+    for (const note of uniqueNotes) {
+      const paths = reasonPaths.get(note) ?? [];
+      paths.push(file.path);
+      reasonPaths.set(note, paths);
+    }
+  }
+
+  if (reasonPaths.size === 0) {
+    return;
+  }
+
+  parts.push("");
+  parts.push("why:");
+
+  for (const [note, paths] of reasonPaths) {
+    parts.push(`  ${note}:`);
+    for (const path of paths) {
+      parts.push(`    ${path}`);
+    }
+  }
+}
+
 export function renderSearchResults(result: SearchResponse): string {
   if (result.files.length === 0) {
     return [
@@ -34,15 +67,14 @@ export function renderSearchResults(result: SearchResponse): string {
   for (const file of result.files) {
     parts.push("");
     parts.push(file.path);
-    if (file.reasons.length > 0) {
-      parts.push(`  why: ${file.reasons.map((reason) => reason.note).join("; ")}`);
-    }
 
     for (const match of file.matches) {
       parts.push(`  ${match.line}-${match.line}:`);
       parts.push(`    ${match.line}| ${truncateLine(match.text)}`);
     }
   }
+
+  appendGroupedReasons(parts, result.files);
 
   if (result.warnings.length > 0) {
     parts.push("");
@@ -65,10 +97,9 @@ export function renderFindFilesResults(result: FindFilesResponse): string {
   for (const file of result.results) {
     parts.push("");
     parts.push(file.path);
-    if (file.reasons.length > 0) {
-      parts.push(`  why: ${file.reasons.map((reason) => reason.note).join("; ")}`);
-    }
   }
+
+  appendGroupedReasons(parts, result.results);
 
   if (result.warnings.length > 0) {
     parts.push("");
