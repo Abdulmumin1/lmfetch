@@ -1,5 +1,11 @@
 # lmfetch-bun: Final UI Improvements
 
+### 0.5.1
+
+### Patch Changes
+
+- 7e94772: Group repeated human-readable search reasons at the end of text output instead of repeating `why:` under every file.
+
 ## 0.5.0
 
 ### Minor Changes
@@ -11,7 +17,6 @@
   - Build contexts from ranked search candidates and line-neighborhood windows before falling back to broad scans.
   - Add a TypeScript MCP server (`lmfetch-mcp`) exposing `search_code`, `find_files`, `read_code`, and `fetch_context` tools.
   - Improve search resilience with broadened multi-term fallback queries and lower ranking for research, generated, and lockfile paths.
-  - Group repeated human-readable search reasons at the end of text output instead of repeating `why:` under every file.
 
 ## 0.4.2
 
