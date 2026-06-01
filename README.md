@@ -35,6 +35,18 @@ bun install -g lmfetch
 # Fetch local code
 lmfetch . "how does authentication work"
 
+# Search first and return ranked evidence (auto uses fff if installed, else ripgrep)
+lmfetch search . "where is authentication validated"
+
+# Structured JSON output for agents and tools
+lmfetch search . "ContextBuilder" --json
+
+# Find candidate files by path/name
+lmfetch find-files . builder
+
+# Read a file with numbered lines
+lmfetch read-code . lmfetch-bun/src/builder.ts --start-line 45 --max-lines 20
+
 # Fetch from GitHub
 lmfetch https://github.com/vercel/ai "explain tool calling"
 
@@ -64,6 +76,7 @@ bun add lmfetch
 
 ```typescript
 import { ContextBuilder, query, fetchContext } from "lmfetch";
+import { readCode, searchCode } from "lmfetch";
 
 // Quick query with LLM
 const answer = await query(".", "how does authentication work", {
@@ -92,6 +105,20 @@ const result = await builder.build();
 console.log(`Context: ${result.context}`);
 console.log(`Tokens: ${result.tokens}`);
 console.log(`Files processed: ${result.filesProcessed}`);
+
+// Search for ranked evidence before reading code
+const search = await searchCode(".", "ContextBuilder", {
+  maxFiles: 5,
+});
+console.log(search.bestNextStep);
+console.log(search.files[0]);
+
+// Read a file slice after choosing it
+const file = await readCode(".", "lmfetch-bun/src/builder.ts", {
+  startLine: 45,
+  maxLines: 20,
+});
+console.log(file.lines);
 ```
 
 ## Options

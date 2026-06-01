@@ -7,11 +7,19 @@ import ora, { Ora } from "ora";
 import cliProgress from "cli-progress";
 import { marked } from "marked";
 import { markedTerminal } from "marked-terminal";
-import { ContextBuilder } from "./builder";
+import { buildContextWithSearch } from "./context-search";
 import { queryWithContext } from "./llm";
 import { getCache } from "./cache";
 import { isPiped } from "./utils";
 import { parseBudget } from "./tokens";
+import {
+  findFiles,
+  readCode,
+  renderFindFilesResults,
+  renderReadCodeResult,
+  renderSearchResults,
+  searchCode,
+} from "./search";
 import { version } from "../package.json";
 
 // Configure marked with terminal renderer
@@ -46,7 +54,174 @@ function renderMarkdown(text: string): string {
   }
 }
 
+function parsePositiveInt(value: string, flagName: string): number {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`${flagName} must be a positive integer`);
+  }
+  return parsed;
+}
+
 const program = new Command();
+
+program
+  .command("search")
+  .description("Search code and return ranked evidence")
+  .argument("<path>", "Local directory path or GitHub URL")
+  .argument("<query>", "Text or regex query")
+  .option("-g, --glob <glob>", "Restrict search to matching paths")
+  .option("-t, --type <type>", "Restrict search to a ripgrep file type")
+  .option("--max-files <number>", "Maximum files to return", "10")
+  .option("--max-matches-per-file <number>", "Maximum matches per file", "3")
+  .option(
+    "--provider <provider>",
+    "Search provider (auto, ripgrep, fff)",
+    "auto",
+  )
+  .option("--json", "Output structured JSON")
+  .action(async (path, query, options) => {
+    const isInteractive = !isPiped() && !options.json;
+    const spinner = isInteractive
+      ? ora({
+          text: "Searching code...",
+          spinner: "star",
+          color: "yellow",
+          interval: 150,
+        }).start()
+      : null;
+
+    try {
+      const provider = options.provider as "auto" | "ripgrep" | "fff";
+      if (!["auto", "ripgrep", "fff"].includes(provider)) {
+        throw new Error("--provider must be one of: auto, ripgrep, fff");
+      }
+
+      const result = await searchCode(path, query, {
+        pathGlob: options.glob,
+        fileType: options.type,
+        maxFiles: parsePositiveInt(options.maxFiles, "--max-files"),
+        maxMatchesPerFile: parsePositiveInt(
+          options.maxMatchesPerFile,
+          "--max-matches-per-file",
+        ),
+        provider,
+        onProgress: (message) => {
+          if (spinner) {
+            spinner.text = message;
+          }
+        },
+      });
+
+      spinner?.stop();
+
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+
+      console.log(renderSearchResults(result));
+      console.log();
+    } catch (error) {
+      spinner?.stop();
+      console.error(chalk.red(`Error: ${(error as Error).message}`));
+      process.exit(1);
+    }
+  });
+
+program
+  .command("find-files")
+  .alias("find")
+  .description("Find files by path or filename")
+  .argument("<path>", "Local directory path or GitHub URL")
+  .argument("[pattern]", "Case-insensitive filename/path pattern")
+  .option("-g, --glob <glob>", "Restrict search to matching paths")
+  .option("-t, --type <type>", "Restrict search to a ripgrep file type")
+  .option("--max-results <number>", "Maximum files to return", "50")
+  .option(
+    "--provider <provider>",
+    "Search provider (auto, ripgrep, fff)",
+    "auto",
+  )
+  .option("--json", "Output structured JSON")
+  .action(async (path, pattern, options) => {
+    const isInteractive = !isPiped() && !options.json;
+    const spinner = isInteractive
+      ? ora({
+          text: "Finding files...",
+          spinner: "star",
+          color: "yellow",
+          interval: 150,
+        }).start()
+      : null;
+
+    try {
+      const provider = options.provider as "auto" | "ripgrep" | "fff";
+      if (![
+        "auto",
+        "ripgrep",
+        "fff",
+      ].includes(provider)) {
+        throw new Error("--provider must be one of: auto, ripgrep, fff");
+      }
+
+      const result = await findFiles(path, pattern, {
+        pathGlob: options.glob,
+        fileType: options.type,
+        maxResults: parsePositiveInt(options.maxResults, "--max-results"),
+        provider,
+        onProgress: (message) => {
+          if (spinner) {
+            spinner.text = message;
+          }
+        },
+      });
+
+      spinner?.stop();
+
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+
+      console.log(renderFindFilesResults(result));
+      console.log();
+    } catch (error) {
+      spinner?.stop();
+      console.error(chalk.red(`Error: ${(error as Error).message}`));
+      process.exit(1);
+    }
+  });
+
+program
+  .command("read-code")
+  .alias("read")
+  .description("Read a file with line numbers")
+  .argument("<path>", "Local directory path or GitHub URL")
+  .argument("<file>", "Exact path or unique suffix")
+  .option("--start-line <number>", "1-indexed start line", "1")
+  .option("--end-line <number>", "1-indexed end line", "0")
+  .option("--max-lines <number>", "Maximum lines when end line is omitted", "80")
+  .option("--json", "Output structured JSON")
+  .action(async (path, file, options) => {
+    try {
+      const result = await readCode(path, file, {
+        startLine: parsePositiveInt(options.startLine, "--start-line"),
+        endLine: Number.parseInt(options.endLine, 10),
+        maxLines: parsePositiveInt(options.maxLines, "--max-lines"),
+      });
+
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+
+      console.log(renderReadCodeResult(result));
+      console.log();
+    } catch (error) {
+      console.error(chalk.red(`Error: ${(error as Error).message}`));
+      process.exit(1);
+    }
+  });
 
 program
   .name("lmfetch")
@@ -99,12 +274,28 @@ program
       if (message.includes("Discovering files")) {
         // Show spinner during discovery
         if (isInteractive) {
+          currentSpinner?.stop();
           currentSpinner = ora({
             text: "Discovering files...",
             spinner: "star",
             color: "yellow",
             interval: 150,
           }).start();
+        }
+      } else if (message.includes("Searching for candidate files") || message.includes("Searching with ")) {
+        if (isInteractive && !currentSpinner) {
+          currentSpinner = ora({
+            text: message,
+            spinner: "star",
+            color: "yellow",
+            interval: 150,
+          }).start();
+        } else if (currentSpinner) {
+          currentSpinner.text = message;
+        }
+      } else if (message.includes("Search-first selected") || message.includes("Search-first failed") || message.includes("Search returned no candidates")) {
+        if (currentSpinner) {
+          currentSpinner.text = message;
         }
       } else if (message.includes("Found") && message.includes("files")) {
         // Stop discovery spinner
@@ -209,18 +400,14 @@ program
 
     try {
       // Build context
-      const builder = new ContextBuilder({
-        path,
-        query,
+      const result = await buildContextWithSearch(path, query, {
         budget: options.budget,
         includes: options.include,
         excludes: options.exclude,
-        fast: !options.semantic, // Default to fast (keyword-only), use embeddings only with -s
+        fast: !options.semantic,
         forceLarge: options.forceLarge,
         onProgress: progress,
       });
-
-      const result = await builder.build();
 
       // Clean up any remaining spinners/progress
       (currentSpinner as Ora | null)?.stop();

@@ -3,9 +3,9 @@
  */
 import { Glob } from "bun";
 import ignore, { type Ignore } from "ignore";
-import { join, relative, dirname } from "path";
+import { join } from "path";
 import { readFile, stat } from "fs/promises";
-import { readFileSync, existsSync, readdirSync, statSync } from "fs";
+import { readFileSync, existsSync, readdirSync } from "fs";
 import { detectLanguage } from "../utils";
 import type { Source, SourceFile, SourceOptions } from "./types";
 
@@ -116,12 +116,16 @@ export class CodebaseSource implements Source {
   private includes: string[];
   private excludes: string[];
   private forceLarge: boolean;
+  private explicitPaths: string[];
 
   constructor(rootPath: string, options: SourceOptions = {}) {
     this.rootPath = rootPath;
     this.includes = options.includes || [];
     this.excludes = options.excludes || [];
     this.forceLarge = options.forceLarge || false;
+    this.explicitPaths = Array.from(
+      new Set((options.paths || []).map((path) => this.normalizeRelativePath(path))),
+    );
 
     // Initialize root ignore with defaults
     this.rootIgnore = ignore();
@@ -129,7 +133,13 @@ export class CodebaseSource implements Source {
     this.addUserExcludes();
 
     // Load all .gitignore files in the codebase
-    this.loadAllGitignores();
+    if (this.explicitPaths.length === 0) {
+      this.loadAllGitignores();
+    }
+  }
+
+  private normalizeRelativePath(path: string): string {
+    return path.replace(/^\.\//, "").replace(/\\/g, "/");
   }
 
   /**
@@ -271,7 +281,48 @@ export class CodebaseSource implements Source {
     return false;
   }
 
+  private async *discoverExplicitFiles(): AsyncGenerator<SourceFile> {
+    for (const explicitPath of this.explicitPaths) {
+      const relativePath = this.normalizeRelativePath(explicitPath);
+      const absolutePath = join(this.rootPath, relativePath);
+
+      if (!this.shouldInclude(relativePath)) {
+        continue;
+      }
+
+      try {
+        const fileStat = await stat(absolutePath);
+        if (!fileStat.isFile()) continue;
+
+        if (!this.forceLarge && fileStat.size > MAX_FILE_SIZE) {
+          continue;
+        }
+
+        const content = await readFile(absolutePath, "utf-8");
+        if (this.isTooLarge(content, fileStat.size)) {
+          continue;
+        }
+
+        yield {
+          path: absolutePath,
+          relativePath,
+          content,
+          language: detectLanguage(relativePath),
+          size: fileStat.size,
+          mtime: fileStat.mtimeMs,
+        };
+      } catch {
+        continue;
+      }
+    }
+  }
+
   async *discover(): AsyncGenerator<SourceFile> {
+    if (this.explicitPaths.length > 0) {
+      yield* this.discoverExplicitFiles();
+      return;
+    }
+
     const glob = new Glob("**/*");
 
     for await (const entry of glob.scan({

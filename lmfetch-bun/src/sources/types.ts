@@ -22,6 +22,8 @@ export interface SourceOptions {
   includes?: string[];
   /** Glob patterns to exclude */
   excludes?: string[];
+  /** Exact relative file paths to load */
+  paths?: string[];
   /** Process files larger than 1MB or 20k lines */
   forceLarge?: boolean;
 }
