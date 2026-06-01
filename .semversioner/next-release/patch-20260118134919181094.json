@@ -1,4 +1,0 @@
-{
-  "type": "patch",
-  "description": " fix(ci): ad-hoc sign macOS binaries to resolve slow startup (Gatekeeper)"
-}

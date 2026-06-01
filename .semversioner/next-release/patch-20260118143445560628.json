@@ -1,4 +1,0 @@
-{
-  "type": "patch",
-  "description": "feat(ci): switch to PyInstaller for faster builds and stability"
-}
