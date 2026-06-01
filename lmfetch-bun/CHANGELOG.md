@@ -1,5 +1,11 @@
 # lmfetch-bun: Final UI Improvements
 
+### 0.5.1
+
+### Patch Changes
+
+- 7e94772: Group repeated human-readable search reasons at the end of text output instead of repeating `why:` under every file.
+
 ## 0.5.0
 
 ### Minor Changes
